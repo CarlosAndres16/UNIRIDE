@@ -1,0 +1,637 @@
+{
+  "info": {
+    "_postman_id": "a0d5d12c-53b1-478d-81ef-ac8a21f94ef0",
+    "name": "UniRide | ms-usuarios-auth",
+    "description": "Contrato de cinco endpoints. Ejecutar en orden con entorno local y password configurado solo como valor local. La primera solicitud genera un correo único. No incluye secretos de SQL Server ni JWT_SECRET.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.variables.set(\"correlationId\", pm.variables.replaceIn(\"{{$guid}}\"));",
+          "if (!pm.environment.get(\"password\")) { throw new Error(\"Configura password (mínimo 8 caracteres) como valor local del entorno.\"); }",
+          "pm.variables.set(\"passwordJson\", JSON.stringify(pm.environment.get(\"password\")));",
+          "if (pm.info.requestName === \"01. Registrar conductor\") { pm.environment.set(\"correo\", \"conductor.\" + Date.now() + \".\" + pm.variables.replaceIn(\"{{$guid}}\").slice(0, 8) + \"@example.com\"); }"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test(\"Devuelve el correlation ID de la solicitud\", () => pm.expect(pm.response.headers.get(\"X-Correlation-Id\")).to.eql(pm.variables.get(\"correlationId\")));",
+          "const responseBody = pm.response.json();",
+          "pm.test(\"No expone campos privados\", () => { [\"password\", \"passwordHash\", \"password_hash\"].forEach(key => pm.expect(responseBody).not.to.have.property(key)); const password = pm.environment.get(\"password\"); if (password) { pm.expect(pm.response.text()).not.to.include(password); } });"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Flujo contractual",
+      "item": [
+        {
+          "name": "01. Registrar conductor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/registro",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Apache\",\n  \"correo\": \"{{correo}}\",\n  \"password\": {{passwordJson}},\n  \"telefono\": \"3001234567\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Objeto Conductor exacto\", () => pm.expect(Object.keys(body).sort()).to.eql([\"activo\", \"conductorId\", \"correo\", \"nombre\", \"telefono\"]));",
+                  "pm.environment.set(\"conductorId\", String(body.conductorId));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02. Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"password\": {{passwordJson}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Token Bearer y vigencia\", () => { pm.expect(body.tokenType).to.eql(\"Bearer\"); pm.expect(body.expiresIn).to.be.a(\"number\").above(0); pm.expect(body.conductorId).to.eql(Number(pm.environment.get(\"conductorId\"))); });",
+                  "pm.environment.set(\"accessToken\", body.accessToken);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03. Consultar autenticado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Identidad JWT\", () => { pm.expect(pm.response.json().conductorId).to.eql(Number(pm.environment.get(\"conductorId\"))); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "04. Consultar conductor propio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/conductores/{{conductorId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "05. Actualizar nombre y teléfono",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/conductores/{{conductorId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Alejandro Apache\",\n  \"telefono\": \"3010000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Datos actualizados\", () => { const body = pm.response.json(); pm.expect(body.nombre).to.eql(\"Juan Alejandro Apache\"); pm.expect(body.telefono).to.eql(\"3010000000\"); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Casos negativos",
+      "item": [
+        {
+          "name": "06. Correo duplicado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/registro",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan\",\n  \"correo\": \"{{correo}}\",\n  \"password\": {{passwordJson}},\n  \"telefono\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", () => pm.response.to.have.status(409));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"ErrorResponse\", () => { [\"timestamp\", \"status\", \"error\", \"message\", \"path\", \"correlationId\"].forEach(key => pm.expect(body).to.have.property(key)); pm.expect(body.status).to.eql(409); pm.expect(body.correlationId).to.eql(pm.response.headers.get(\"X-Correlation-Id\")); });",
+                  "pm.test(\"Código duplicado\", () => pm.expect(body.error).to.eql(\"CORREO_YA_REGISTRADO\"));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "07. Password menor de ocho",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/registro",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan\",\n  \"correo\": \"corto@example.com\",\n  \"password\": \"corta\",\n  \"telefono\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"ErrorResponse\", () => { [\"timestamp\", \"status\", \"error\", \"message\", \"path\", \"correlationId\"].forEach(key => pm.expect(body).to.have.property(key)); pm.expect(body.status).to.eql(400); pm.expect(body.correlationId).to.eql(pm.response.headers.get(\"X-Correlation-Id\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "08. Login credenciales incorrectas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"nadie-ficticio@example.com\",\n  \"password\": {{passwordJson}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"ErrorResponse\", () => { [\"timestamp\", \"status\", \"error\", \"message\", \"path\", \"correlationId\"].forEach(key => pm.expect(body).to.have.property(key)); pm.expect(body.status).to.eql(401); pm.expect(body.correlationId).to.eql(pm.response.headers.get(\"X-Correlation-Id\")); });",
+                  "pm.test(\"Credenciales genéricas\", () => pm.expect(body.error).to.eql(\"CREDENCIALES_INVALIDAS\"));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "09. Me sin JWT",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"ErrorResponse\", () => { [\"timestamp\", \"status\", \"error\", \"message\", \"path\", \"correlationId\"].forEach(key => pm.expect(body).to.have.property(key)); pm.expect(body.status).to.eql(401); pm.expect(body.correlationId).to.eql(pm.response.headers.get(\"X-Correlation-Id\")); });",
+                  "pm.test(\"Sin autenticación\", () => pm.expect(body.error).to.eql(\"NO_AUTENTICADO\"));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "10. Me JWT inválido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer token-ficticio-invalido"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"ErrorResponse\", () => { [\"timestamp\", \"status\", \"error\", \"message\", \"path\", \"correlationId\"].forEach(key => pm.expect(body).to.have.property(key)); pm.expect(body.status).to.eql(401); pm.expect(body.correlationId).to.eql(pm.response.headers.get(\"X-Correlation-Id\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "11. Consultar conductor ajeno",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/conductores/2147483647"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"ErrorResponse\", () => { [\"timestamp\", \"status\", \"error\", \"message\", \"path\", \"correlationId\"].forEach(key => pm.expect(body).to.have.property(key)); pm.expect(body.status).to.eql(403); pm.expect(body.correlationId).to.eql(pm.response.headers.get(\"X-Correlation-Id\")); });",
+                  "pm.test(\"Propiedad del recurso\", () => pm.expect(body.error).to.eql(\"NO_AUTORIZADO\"));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "12. Actualizar conductor ajeno",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/conductores/2147483647",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"No permitido\",\n  \"telefono\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"ErrorResponse\", () => { [\"timestamp\", \"status\", \"error\", \"message\", \"path\", \"correlationId\"].forEach(key => pm.expect(body).to.have.property(key)); pm.expect(body.status).to.eql(403); pm.expect(body.correlationId).to.eql(pm.response.headers.get(\"X-Correlation-Id\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "13. Modificar correo prohibido",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/conductores/{{conductorId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan\",\n  \"correo\": \"prohibido@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"ErrorResponse\", () => { [\"timestamp\", \"status\", \"error\", \"message\", \"path\", \"correlationId\"].forEach(key => pm.expect(body).to.have.property(key)); pm.expect(body.status).to.eql(400); pm.expect(body.correlationId).to.eql(pm.response.headers.get(\"X-Correlation-Id\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "14. Modificar activo prohibido",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Correlation-Id",
+                "value": "{{correlationId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/conductores/{{conductorId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan\",\n  \"activo\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"ErrorResponse\", () => { [\"timestamp\", \"status\", \"error\", \"message\", \"path\", \"correlationId\"].forEach(key => pm.expect(body).to.have.property(key)); pm.expect(body.status).to.eql(400); pm.expect(body.correlationId).to.eql(pm.response.headers.get(\"X-Correlation-Id\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ]
+}
