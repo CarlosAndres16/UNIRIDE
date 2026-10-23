@@ -1,0 +1,22 @@
+# Entornos virtuales y archivos de Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.example
+
+# Pruebas y cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Archivos locales
+*.log
+.setup/
+.tools/
+.DS_Store

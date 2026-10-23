@@ -1,0 +1,451 @@
+{
+  "info": {
+    "_postman_id": "925b69e7-8589-49e6-a591-99cef895105b",
+    "name": "UniRide - Reservas y Estadísticas",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Importa también UniRide-Local.postman_environment.json y selecciona ese entorno. Completa accessToken localmente con un JWT HS256 válido emitido por Usuarios; no incluyas el prefijo Bearer. Los secretos se entregan vacíos. El JWT determina el conductor y debe corresponder a los recursos consultados. Esta colección contiene cinco consultas del microservicio y un folder opcional de dependencias. No incluye scripts ni ejecución automática. Las fechas se filtran por fecha de salida del viaje; activa desde/hasta cuando necesites un periodo, con desde <= hasta. Los errores usan correlationId; puedes añadir X-Correlation-Id con un UUID válido, o dejar que el servidor lo genere. Los mocks conservan cambios solo en memoria y requieren JWT_SECRET compatible. No se requiere una ruta de login en este microservicio."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8084",
+      "type": "string",
+      "description": "Base del microservicio Reservas y Estadísticas."
+    },
+    {
+      "key": "viajesUrl",
+      "value": "http://localhost:8083",
+      "type": "string",
+      "description": "Base del servicio Viajes o su mock local."
+    },
+    {
+      "key": "vehiculosUrl",
+      "value": "http://localhost:8082",
+      "type": "string",
+      "description": "Base del servicio Vehículos o su mock local."
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT HS256 emitido por Usuarios, sin el prefijo Bearer. Completar localmente."
+    },
+    {
+      "key": "serviceApiKey",
+      "value": "",
+      "type": "string",
+      "description": "Clave interna compartida para el PUT de ocupación. Completar solo localmente."
+    },
+    {
+      "key": "conductorId",
+      "value": "25",
+      "type": "string",
+      "description": "Debe coincidir con el sub del JWT para consultar sus estadísticas."
+    },
+    {
+      "key": "viajeId",
+      "value": "305",
+      "type": "string",
+      "description": "Viaje de ejemplo perteneciente al conductor 25."
+    },
+    {
+      "key": "vehiculoId",
+      "value": "12",
+      "type": "string",
+      "description": "Vehículo de ejemplo perteneciente al conductor 25."
+    },
+    {
+      "key": "reservaId",
+      "value": "1",
+      "type": "string",
+      "description": "Identificador local; consultar reservas por viaje si el ID real es distinto."
+    },
+    {
+      "key": "estadoReserva",
+      "value": "CONFIRMADA",
+      "type": "string",
+      "description": "Valores: PENDIENTE, CONFIRMADA o CANCELADA. Desactivar el filtro devuelve todos."
+    },
+    {
+      "key": "desde",
+      "value": "2026-10-01",
+      "type": "string",
+      "description": "Límite opcional inclusivo de fecha de salida, YYYY-MM-DD."
+    },
+    {
+      "key": "hasta",
+      "value": "2026-10-31",
+      "type": "string",
+      "description": "Límite opcional inclusivo de fecha de salida, YYYY-MM-DD."
+    },
+    {
+      "key": "cuposOcupados",
+      "value": "2",
+      "type": "string",
+      "description": "Total absoluto de cupos ocupados; no es un incremento."
+    }
+  ],
+  "item": [
+    {
+      "name": "Reservas - consultas",
+      "description": "Solo lecturas autorizadas. Los identificadores son enteros positivos. La lista permite filtrar por estado; una lista vacía responde 200. El detalle requiere que la reserva y su viaje existan y pertenezcan al conductor autenticado.",
+      "item": [
+        {
+          "name": "Reservas por viaje",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reservas/viaje/{{viajeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservas",
+                "viaje",
+                "{{viajeId}}"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "{{estadoReserva}}",
+                  "description": "Opcional; valores exactos PENDIENTE, CONFIRMADA o CANCELADA.",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Consulta reservas del viaje propio. El filtro estado está desactivado inicialmente: actívalo para PENDIENTE, CONFIRMADA o CANCELADA. Los datos de ejemplo son Laura Gómez y David Ruiz CONFIRMADA, y Carlos Pérez CANCELADA."
+          },
+          "response": []
+        },
+        {
+          "name": "Reserva por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reservas/{{reservaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservas",
+                "{{reservaId}}"
+              ]
+            },
+            "description": "Obtiene una reserva propia por su ID. El valor 1 es orientativo: el seed usa SQL IDENTITY, por lo que conviene obtener el ID real con la consulta por viaje."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Estadísticas - consultas",
+      "description": "Cálculos al solicitarse, sin tabla de estadísticas. Requieren JWT del propietario y disponibilidad de Viajes; el cálculo por vehículo también consulta Vehículos. Sin ambos límites de fecha se consulta el periodo completo. Activar un solo límite deja abierto el otro extremo.",
+      "item": [
+        {
+          "name": "Estadísticas del viaje",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/estadisticas/viaje/{{viajeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "estadisticas",
+                "viaje",
+                "{{viajeId}}"
+              ]
+            },
+            "description": "Calcula estadísticas del viaje propio. Si está ACTIVO y su disponibilidad difiere del total confirmado local, informa la ocupación a Viajes. Un fallo exclusivo de ese informe no invalida la consulta."
+          },
+          "response": []
+        },
+        {
+          "name": "Estadísticas del conductor",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/estadisticas/conductor/{{conductorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "estadisticas",
+                "conductor",
+                "{{conductorId}}"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Opcional: fecha inicial inclusiva de salida del viaje (YYYY-MM-DD).",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Opcional: fecha final inclusiva de salida del viaje (YYYY-MM-DD).",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "El conductorId debe ser el del JWT. Activa desde/hasta para limitar por fecha de salida, ambos extremos inclusivos."
+          },
+          "response": []
+        },
+        {
+          "name": "Estadísticas del vehículo",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/estadisticas/vehiculo/{{vehiculoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "estadisticas",
+                "vehiculo",
+                "{{vehiculoId}}"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Opcional: fecha inicial inclusiva de salida del viaje (YYYY-MM-DD).",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Opcional: fecha final inclusiva de salida del viaje (YYYY-MM-DD).",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "El vehículo debe pertenecer al conductor del JWT. Activa desde/hasta para limitar por fecha de salida, ambos extremos inclusivos."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dependencias - uso opcional local",
+      "description": "Solicitudes directas a Viajes/Vehículos o a sus mocks. Se incluyen para trabajo manual. El PUT es una operación de escritura de la dependencia: envía el total absoluto de ocupación y requiere la clave interna; no usa JWT. Ninguna solicitud se ejecuta al importar.",
+      "item": [
+        {
+          "name": "Viajes - detalle",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{viajesUrl}}/api/v1/viajes/{{viajeId}}",
+              "host": [
+                "{{viajesUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "viajes",
+                "{{viajeId}}"
+              ]
+            },
+            "description": "Consulta un viaje propio con el mismo JWT usado en Reservas."
+          },
+          "response": []
+        },
+        {
+          "name": "Viajes - listado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{viajesUrl}}/api/v1/viajes?conductorId={{conductorId}}&estado=TODOS&pagina=1&tamano=50",
+              "host": [
+                "{{viajesUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "viajes"
+              ],
+              "query": [
+                {
+                  "key": "conductorId",
+                  "value": "{{conductorId}}",
+                  "description": "Filtro por conductor."
+                },
+                {
+                  "key": "vehiculoId",
+                  "value": "{{vehiculoId}}",
+                  "description": "Filtro opcional por vehículo.",
+                  "disabled": true
+                },
+                {
+                  "key": "estado",
+                  "value": "TODOS",
+                  "description": "Incluye ACTIVO, FINALIZADO y CANCELADO."
+                },
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Opcional: fecha inicial inclusiva de salida del viaje (YYYY-MM-DD).",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Opcional: fecha final inclusiva de salida del viaje (YYYY-MM-DD).",
+                  "disabled": true
+                },
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "tamano",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Listado paginado autenticado. Se fuerza estado TODOS para conservar los viajes cancelados en los datos recibidos; pagina 1 y tamaño 50. La aplicación recorre las páginas necesarias para sus cálculos."
+          },
+          "response": []
+        },
+        {
+          "name": "Vehículos - detalle",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{vehiculosUrl}}/api/v1/vehiculos/{{vehiculoId}}",
+              "host": [
+                "{{vehiculosUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehiculos",
+                "{{vehiculoId}}"
+              ]
+            },
+            "description": "Consulta el vehículo propio con JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "Viajes - actualizar total de ocupación (interno)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Service-Key",
+                "value": "{{serviceApiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cuposOcupados\": {{cuposOcupados}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{viajesUrl}}/api/v1/viajes/{{viajeId}}/ocupacion",
+              "host": [
+                "{{viajesUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "viajes",
+                "{{viajeId}}",
+                "ocupacion"
+              ]
+            },
+            "description": "Escritura manual interna en Viajes. Completa serviceApiKey localmente. Esta solicitud desactiva la autenticación Bearer heredada y envía únicamente X-Service-Key. cuposOcupados es el total absoluto, entero >= 0 y no mayor que la capacidad. Solo un viaje ACTIVO admite el cambio; repetir el mismo total es idempotente. En los mocks el cambio se pierde al reiniciar. No es una ruta de Reservas."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
