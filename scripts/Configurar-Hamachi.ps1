@@ -103,6 +103,7 @@ foreach ($nombre in $seleccion) {
         }
     }
     Establecer-Variables $archivo $valores
+    if ($nombre -eq 'frontend') { Write-Host ("Gateway del frontend: " + $valores['GATEWAY_URL'] + ' (segun el mapa de red).') }
     Write-Host "Configurado $nombre. Se conservaron las variables DB_*; revisa las de tu propio equipo si es la primera instalación."
 }
 Write-Host 'Reinicia los procesos o recrea los contenedores afectados para cargar los cambios.'

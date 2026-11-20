@@ -10,8 +10,8 @@ Portal del conductor con Usuarios, Vehículos, Viajes, Reservas y Estadísticas,
 | Vehículos | LAPTOP | 25.0.88.33 | 8082 | PostgreSQL |
 | Viajes | Andres | 25.33.226.75 | 8083 | PostgreSQL |
 | Reservas | Apache | 25.1.20.39 | 8084 | SQL Server |
-| Gateway | Apache | 25.1.20.39 | 8080 | Ninguno |
-| Frontend | Apache o cada integrante | Según equipo | 3000 | Ninguno |
+| Gateway | Arias | 25.32.113.17 | 8080 | Ninguno |
+| Frontend | Arias o cada integrante | 25.32.113.17 si lo aloja Arias | 3000 | Ninguno |
 
 Las direcciones se mantienen en `config/hamachi.json`. Si el Gateway cambia de equipo, cambia su `host` en ese archivo y vuelve a ejecutar el configurador para Gateway y Frontend. Estar en Hamachi no inicia las APIs: cada responsable debe arrancar su base y su servicio. Mantén los equipos despiertos y permite los puertos de sus APIs en el firewall únicamente para los integrantes de la red.
 
@@ -73,7 +73,7 @@ O, con PostgreSQL ya iniciado, desde la raíz:
 
 El Compose de Viajes inicia únicamente PostgreSQL. Si lo utilizan, ejecuten `docker compose up -d` en `ms-viajes`, esperen a que su base esté lista y después inicien la API Node. Si ambas bases PostgreSQL están en un mismo equipo, sus puertos publicados deben ser distintos; Vehículos utiliza 5434 y Viajes utiliza `DB_PORT` de su `.env`.
 
-Todas las APIs escuchan por defecto en `0.0.0.0`, configurable mediante `SERVER_HOST`. El frontend acepta conexiones de red con `FRONTEND_HOST=0.0.0.0`; Apache puede abrir `http://localhost:3000` y sus compañeros `http://25.1.20.39:3000`. También pueden ejecutar su propio frontend local apuntando al Gateway de Apache. El proxy del frontend mantiene el acceso a la API a través del Gateway; `JWT_SECRET` y `SERVICE_API_KEY` nunca se incluyen en Vite.
+Todas las APIs escuchan por defecto en `0.0.0.0`, configurable mediante `SERVER_HOST`. El frontend acepta conexiones de red con `FRONTEND_HOST=0.0.0.0`; Arias puede abrir `http://localhost:3000` y sus compañeros `http://25.32.113.17:3000`. También pueden ejecutar su propio frontend local apuntando al Gateway de Arias. El configurador utiliza `GATEWAY_URL=http://25.32.113.17:8080`, accesible tanto desde Arias como desde los otros equipos por Hamachi. Si frontend y Gateway se ejecutan en Arias, `http://127.0.0.1:8080` también sirve como destino local manual. El proxy del frontend mantiene el acceso a la API a través del Gateway; `JWT_SECRET` y `SERVICE_API_KEY` nunca se incluyen en Vite.
 
 Reinicia las APIs después de cambiar `.env`. Con Docker, recrea los contenedores (`docker compose up --build -d`); un simple reinicio puede conservar la configuración anterior. No borres volúmenes para cambiar direcciones o claves.
 
@@ -90,7 +90,7 @@ Con todos los servicios listos, entra al frontend y registra una cuenta, inicia 
 Existe además una comprobación funcional automatizada **que escribe datos reales de prueba**:
 
 ```powershell
-node scripts/probar-flujo.mjs --gateway http://25.1.20.39:8080 --crear-datos-de-prueba
+node scripts/probar-flujo.mjs --gateway http://25.32.113.17:8080 --crear-datos-de-prueba
 ```
 
 Registra una cuenta de ejemplo, inicia sesión, crea un vehículo y un viaje, edita con versión, consulta reservas y las tres estadísticas, finaliza el viaje y desactiva el vehículo. No imprime tokens ni contraseñas. Los registros de prueba permanecen en el historial; si falla a mitad del recorrido, revisa los IDs creados antes de repetirlo.
@@ -126,7 +126,7 @@ Viajes consume Vehículos directamente; Reservas consume Viajes y Vehículos dir
 Después del diagnóstico, pueden ejecutar el recorrido completo contra su Gateway:
 
 ```powershell
-node .\scripts\probar-flujo.mjs --gateway http://25.1.20.39:8080 --crear-datos-de-prueba
+node .\scripts\probar-flujo.mjs --gateway http://25.32.113.17:8080 --crear-datos-de-prueba
 ```
 
 Esta prueba escribe datos: registra una cuenta ficticia, inicia sesión, registra un vehículo, publica y edita un viaje, consulta reservas y estadísticas, finaliza el viaje y desactiva el vehículo. La cuenta y los registros de historial permanecen como datos de prueba. No imprime ni guarda la contraseña o el JWT. Si falla, muestra los identificadores que ya se crearon para poder revisarlos.

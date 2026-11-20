@@ -148,4 +148,4 @@ vite.config.ts     Servidor local y proxy
 
 ## Conexión entre equipos
 
-El mapa compartido está en `config/hamachi.json`, en la raíz del repositorio. Ejecuta `scripts\Configurar-Hamachi.ps1 -Servicio Frontend` desde esa raíz para apuntar al Gateway de Apache. `FRONTEND_HOST=0.0.0.0` permite abrir el portal por la IP de Hamachi del equipo que ejecuta Vite; `FRONTEND_PORT` controla su puerto. El servidor de desarrollo se comparte únicamente dentro de la red del equipo. Los secretos permanecen en los microservicios.
+El mapa compartido está en `config/hamachi.json`, en la raíz del repositorio. Ejecuta `scripts\Configurar-Hamachi.ps1 -Servicio Frontend` desde esa raíz para apuntar al Gateway de Arias (`http://25.32.113.17:8080`). El configurador actualiza `.env.local` y muestra ese destino. `FRONTEND_HOST=0.0.0.0` permite abrir el portal por la IP de Hamachi del equipo que ejecuta Vite; `FRONTEND_PORT` controla su puerto. El servidor de desarrollo se comparte únicamente dentro de la red del equipo. Los secretos permanecen en los microservicios.

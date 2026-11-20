@@ -7,7 +7,7 @@
   "viajes": { "aprobadas": 17, "proveedor_y_base": "simulados" },
   "gateway": { "aprobadas": 13, "proveedores": "cuatro servidores HTTP locales simulados" },
   "frontend": { "aprobadas": 14, "build": "correcto" },
-  "configuracion": { "aserciones": 299, "interpretes": ["PowerShell 7", "Windows PowerShell 5.1"] },
+  "configuracion": { "aserciones": 306, "interpretes": ["PowerShell 7"], "regresion": "Gateway y frontend en Arias; reejecutar el configurador conserva el destino correcto" },
   "pendiente": ["conectividad Hamachi con los equipos encendidos", "bases de datos reales", "recorrido funcional real con el nuevo Gateway"],
   "secretos_publicados": false
 }

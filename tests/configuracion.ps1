@@ -12,7 +12,7 @@ $folders = [ordered]@{
 $ports = @{ usuarios = 8081; vehiculos = 8082; viajes = 8083; reservas = 8084; gateway = 8080; frontend = 3000 }
 $hosts = @{
     usuarios = '25.32.113.17'; vehiculos = '25.0.88.33'; viajes = '25.33.226.75'
-    reservas = '25.1.20.39'; gateway = '25.1.20.39'; frontend = '25.1.20.39'
+    reservas = '25.1.20.39'; gateway = '25.32.113.17'; frontend = '25.32.113.17'
 }
 $jwt = 'jwt-ficticio-exclusivo-pruebas-1234567890'
 $serviceKey = 'service-ficticio-exclusivo-pruebas-9876543210'
@@ -117,6 +117,9 @@ foreach ($name in @('usuarios', 'vehiculos', 'viajes', 'reservas')) {
     $before[$name] = $dbText
     $dbSnapshots[$name] = Read-Variables $path
 }
+# Regression: migrate files generated with the previous location in Apache.
+Write-TestFile (Get-EnvPath $fixture 'frontend') "GATEWAY_URL=http://25.1.20.39:8080`r`nVITE_API_BASE_URL=/api/v1`r`n"
+Write-TestFile (Get-EnvPath $fixture 'gateway') "FRONTEND_ORIGIN=http://25.1.20.39:3000`r`n"
 $result = Invoke-Configurator $fixture @{ Servicio = 'Todos'; ClavesRuta = $keysPath }
 Assert-Test $result.Succeeded 'Configuracion Hamachi completa.'
 Assert-NoSecrets $result.Output @($jwt, $serviceKey)
@@ -133,7 +136,7 @@ foreach ($name in $folders.Keys) {
     $configured[$name] = $values
     if ($name -eq 'frontend') {
         Assert-Test ($values['FRONTEND_HOST'] -eq '0.0.0.0' -and $values['FRONTEND_PORT'] -eq '3000') 'Frontend escucha en LAN y puerto 3000.'
-        Assert-Test ($values['GATEWAY_URL'] -eq 'http://25.1.20.39:8080') 'Frontend apunta al Gateway Hamachi.'
+        Assert-Test ($values['GATEWAY_URL'] -eq 'http://25.32.113.17:8080') 'Frontend apunta al Gateway de Arias.'
         Assert-Test ($values['VITE_API_BASE_URL'] -eq '/api/v1') 'El navegador usa la ruta relativa del proxy.'
     } else {
         Assert-Test ($values['SERVER_HOST'] -eq '0.0.0.0') ('Escucha LAN para ' + $name)
@@ -162,7 +165,12 @@ foreach ($name in @('usuarios', 'vehiculos', 'viajes', 'reservas')) {
     $key = $name.ToUpperInvariant() + '_SERVICE_URL'
     Assert-Test ($configured['gateway'][$key] -eq ('http://' + $hosts[$name] + ':' + $ports[$name])) ('Gateway apunta a ' + $name)
 }
-Assert-Test ($configured['gateway']['FRONTEND_ORIGIN'].Split(',') -contains 'http://25.1.20.39:3000') 'CORS incluye el frontend Hamachi.'
+Assert-Test ($configured['gateway']['FRONTEND_ORIGIN'].Split(',') -contains 'http://25.32.113.17:3000') 'CORS incluye el frontend de Arias.'
+Assert-Test ($configured['gateway']['FRONTEND_ORIGIN'].Split(',') -notcontains 'http://25.1.20.39:3000') 'CORS deja de apuntar al frontend anterior.'
+$result = Invoke-Configurator $fixture @{ Servicio = 'Frontend' }
+Assert-Test $result.Succeeded 'Repetir el configurador de frontend sin claves.'
+$repeated = Read-Variables (Get-EnvPath $fixture 'frontend')
+Assert-Test ($repeated['GATEWAY_URL'] -eq 'http://25.32.113.17:8080') 'Repetir el script conserva el Gateway correcto de Arias.'
 
 $result = Invoke-Configurator $fixture @{ Servicio = 'Todos'; ClavesRuta = $keysPath; Local = $true }
 Assert-Test $result.Succeeded 'Configuracion Local completa.'

@@ -3,6 +3,6 @@
   "vehiculos": { "host": "25.0.88.33", "port": 8082, "carpeta": "ms-vehiculos" },
   "viajes": { "host": "25.33.226.75", "port": 8083, "carpeta": "ms-viajes" },
   "reservas": { "host": "25.1.20.39", "port": 8084, "carpeta": "ms-reservas-estadisticas" },
-  "gateway": { "host": "25.1.20.39", "port": 8080, "carpeta": "api-gateway" },
-  "frontend": { "host": "25.1.20.39", "port": 3000, "carpeta": "frontend-uniride" }
+  "gateway": { "host": "25.32.113.17", "port": 8080, "carpeta": "api-gateway" },
+  "frontend": { "host": "25.32.113.17", "port": 3000, "carpeta": "frontend-uniride" }
 }
