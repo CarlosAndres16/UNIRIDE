@@ -1,4 +1,11 @@
-require('dotenv').config();
+const path = require('node:path');
+const dotenv = require('dotenv');
+// Las claves y direcciones de práctica ganan sobre un .env antiguo; DB_* sigue local.
+// Una variable explícita del proceso conserva la prioridad habitual de dotenv.
+if (process.env.UNIRIDE_PRACTICA_AUTO !== '0') {
+  dotenv.config({ path: path.resolve(__dirname, '../../.env.practica') });
+}
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const requeridas = [
   'SERVER_PORT',

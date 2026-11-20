@@ -385,3 +385,8 @@ Desde la raíz de UNIRIDE, ejecuta `scripts\Configurar-Hamachi.ps1 -Servicio Res
 `GET /health` responde por el proceso sin consultar SQL. `GET /health/ready` ejecuta SELECT 1 en la base propia desde un hilo y devuelve 503 si la conexión falla, sin publicar errores ODBC ni credenciales. Ninguna de estas rutas requiere JWT.
 
 Para datos de integración, `python -m scripts.seed_reservas --viaje-id ID_REAL` utiliza el identificador real del viaje creado en Viajes. Omitir la opción conserva el ejemplo histórico 305. El seed escribe en SQL y debe ejecutarse deliberadamente sobre registros de prueba.
+
+
+## Claves automaticas de practica
+
+El archivo `.env.practica` de esta carpeta se carga al arrancar normalmente, con prioridad sobre las claves de un `.env` antiguo. Conserva tu `.env` para la conexion a tu propia base y las direcciones de servicios. No hace falta ejecutar el configurador para cargar JWT_SECRET y SERVICE_API_KEY. Las variables explicitas del proceso conservan prioridad; `UNIRIDE_PRACTICA_AUTO=0` permite usar deliberadamente solo el `.env` local.

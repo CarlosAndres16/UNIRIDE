@@ -2,18 +2,20 @@
 
 from functools import lru_cache
 from pathlib import Path
+import os
 
 from pydantic import AnyHttpUrl, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ENV_FILES = (PROJECT_ROOT / ".env", PROJECT_ROOT / ".env.practica") if os.getenv("UNIRIDE_PRACTICA_AUTO", "1") != "0" else (PROJECT_ROOT / ".env",)
 
 
 class Settings(BaseSettings):
     """Carga variables del entorno y del archivo .env del proyecto."""
 
     model_config = SettingsConfigDict(
-        env_file=PROJECT_ROOT / ".env",
+        env_file=ENV_FILES,
         env_file_encoding="utf-8",
         extra="ignore",
         hide_input_in_errors=True,
@@ -33,7 +35,7 @@ class JwtSettings(BaseSettings):
     """Valida el secreto JWT sin exigir una conexion a la base de datos."""
 
     model_config = SettingsConfigDict(
-        env_file=PROJECT_ROOT / ".env",
+        env_file=ENV_FILES,
         env_file_encoding="utf-8",
         extra="ignore",
         hide_input_in_errors=True,
@@ -53,7 +55,7 @@ class HttpClientSettings(BaseSettings):
     """URLs y limites HTTP; independientes de la configuracion SQL y JWT."""
 
     model_config = SettingsConfigDict(
-        env_file=PROJECT_ROOT / ".env", env_file_encoding="utf-8",
+        env_file=ENV_FILES, env_file_encoding="utf-8",
         extra="ignore", hide_input_in_errors=True,
     )
 
@@ -72,7 +74,7 @@ class HttpClientSettings(BaseSettings):
 
 class ServiceAuthSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=PROJECT_ROOT / ".env", env_file_encoding="utf-8",
+        env_file=ENV_FILES, env_file_encoding="utf-8",
         extra="ignore", hide_input_in_errors=True,
     )
 

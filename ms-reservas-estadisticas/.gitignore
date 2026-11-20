@@ -9,6 +9,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+!.env.practica
 
 # Pruebas y cobertura
 .pytest_cache/

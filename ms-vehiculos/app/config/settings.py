@@ -2,16 +2,18 @@
 
 from functools import lru_cache
 from pathlib import Path
+import os
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 projectRoot = Path(__file__).resolve().parents[2]
+ENV_FILES = (projectRoot / ".env", projectRoot / ".env.practica") if os.getenv("UNIRIDE_PRACTICA_AUTO", "1") != "0" else (projectRoot / ".env",)
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=projectRoot / ".env",
+        env_file=ENV_FILES,
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",

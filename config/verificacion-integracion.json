@@ -42,5 +42,10 @@
     "JWT_SECRET",
     "SERVICE_API_KEY"
   ],
-  "credenciales_DB_publicadas": false
+  "credenciales_DB_publicadas": false,
+  "carga_automatica_env": {
+    "python": "tres cargadores verificados con .env antiguo, prioridad de practica, preservacion DB y opcion privada",
+    "node": "cuatro pruebas de configuracion aprobadas sin red",
+    "docker": "Compose valida JWT de .env.practica frente a JWT antiguo del host; conserva password PostgreSQL; no se iniciaron contenedores"
+  }
 }

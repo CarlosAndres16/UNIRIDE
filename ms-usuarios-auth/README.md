@@ -171,3 +171,8 @@ Importar en Postman los dos archivos de `postman/`, seleccionar **UniRide local 
 `controllers` maneja HTTP; `services` aplica reglas y propiedad; `repositories` consulta SQL Server; `models` define persistencia; `schemas` convierte snake_case a camelCase explícitamente; `security` implementa JWT y hashing; `exceptions` unifica errores; `middleware` conserva correlación. `app/dependencies.py` conecta componentes y facilita reemplazarlos en pruebas. `createApp()` construye la aplicación sin conectarse a la base.
 
 Este servicio es dueño exclusivo de `unirride_usuarios`. No llama otros microservicios, no valida tokens remotamente y no expone endpoints de introspección. Tampoco contiene frontend, pasajeros, roles, API Gateway, CORS, `SERVICE_API_KEY` ni clientes HTTP de negocio. La preparación para el Gateway está documentada en [docs/integracion_gateway.md](docs/integracion_gateway.md).
+
+
+## Claves automaticas de practica
+
+El archivo `.env.practica` de esta carpeta se carga al arrancar normalmente, con prioridad sobre las claves de un `.env` antiguo. Conserva tu `.env` para la conexion a tu propia base y las direcciones de servicios. No hace falta ejecutar el configurador para cargar JWT_SECRET. Las variables explicitas del proceso conservan prioridad; `UNIRIDE_PRACTICA_AUTO=0` permite usar deliberadamente solo el `.env` local.

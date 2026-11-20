@@ -43,3 +43,23 @@ test('config rechaza URLs inseguras o inválidas sin imprimir sus valores', () =
     assert.doesNotMatch(r.stderr + r.stdout, /secret-no-mostrar/);
   }
 });
+
+test('arranque normal carga .env.practica antes que un .env antiguo sin alterar DB', () => {
+  const fs = require('node:fs');
+  const setup = path.resolve(__dirname, '../.setup');
+  fs.mkdirSync(setup, {recursive:true});
+  const fixture = fs.mkdtempSync(path.join(setup, 'env-automatico-'));
+  const config = path.join(fixture,'src','config','env.js');
+  fs.mkdirSync(path.dirname(config), {recursive:true});
+  fs.copyFileSync(ruta,config);
+  const nuevoJwt = 'jwt-publico-ficticio-de-pruebas-1234567890';
+  const nuevoService = 'llave-publica-ficticia-de-pruebas-1234567890';
+  fs.writeFileSync(path.join(fixture,'.env.practica'),`JWT_SECRET=${nuevoJwt}\nSERVICE_API_KEY=${nuevoService}\n`);
+  fs.writeFileSync(path.join(fixture,'.env'),'JWT_SECRET=antiguo\nSERVICE_API_KEY=antigua\n');
+  const ambiente = {...base};
+  delete ambiente.JWT_SECRET; delete ambiente.SERVICE_API_KEY; delete ambiente.UNIRIDE_PRACTICA_AUTO;
+  const child = spawnSync(process.execPath, ['-e', `const c=require(${JSON.stringify(config)}); console.log(JSON.stringify({jwtCorrecto:c.jwtSecret===${JSON.stringify(nuevoJwt)},llaveCorrecta:c.serviceApiKey===${JSON.stringify(nuevoService)},passwordConservado:c.db.password==='test-only'}));`],
+    {cwd:__dirname,env:ambiente,encoding:'utf8'});
+  assert.equal(child.status,0,child.stderr);
+  assert.deepEqual(JSON.parse(child.stdout),{jwtCorrecto:true,llaveCorrecta:true,passwordConservado:true});
+});

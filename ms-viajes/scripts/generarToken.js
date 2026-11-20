@@ -1,4 +1,7 @@
-require('dotenv').config();
+if (process.env.UNIRIDE_PRACTICA_AUTO !== '0') {
+  require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env.practica') });
+}
+require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env') });
 const jwt = require('jsonwebtoken');
 
 const conductorId = process.argv[2] || '1';

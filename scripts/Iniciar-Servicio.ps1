@@ -11,6 +11,8 @@ $repo = Split-Path -Parent $PSScriptRoot
 $mapa = Get-Content -LiteralPath (Join-Path $repo 'config\hamachi.json') -Raw | ConvertFrom-Json
 $nombre = $Servicio.ToLowerInvariant()
 $directorio = Join-Path $repo $mapa.$nombre.carpeta
+$practiceAutoAnterior = [Environment]::GetEnvironmentVariable('UNIRIDE_PRACTICA_AUTO', 'Process')
+if ($ClavesRuta) { $env:UNIRIDE_PRACTICA_AUTO = '0' }
 Push-Location -LiteralPath $directorio
 try {
     $configuracion = if ($nombre -eq 'frontend') { '.env.local' } else { '.env' }
@@ -34,4 +36,7 @@ try {
         if ($nombre -eq 'frontend') { & npm.cmd run dev } else { & npm.cmd start }
     }
     if ($LASTEXITCODE -ne 0) { throw "El proceso $Servicio terminó con error. Revisa la configuración y la salida anterior." }
-} finally { Pop-Location }
+} finally {
+    Pop-Location
+    [Environment]::SetEnvironmentVariable('UNIRIDE_PRACTICA_AUTO', $practiceAutoAnterior, 'Process')
+}

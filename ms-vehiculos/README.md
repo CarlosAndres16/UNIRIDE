@@ -51,3 +51,8 @@ Los endpoints operacionales no exigen token y no forman parte del contrato de ne
 - `GET /health/ready`: ejecuta `SELECT 1` en PostgreSQL y devuelve `200 {"status":"UP","servicio":"ms-vehiculos","database":"UP"}`; devuelve `503` con `status` y `database` en `DOWN` cuando no puede completar la consulta. No devuelve credenciales ni detalles de conexión.
 
 En los endpoints de negocio, una base de datos caída produce 503 `SERVICIO_DEPENDIENTE_NO_DISPONIBLE`.
+
+
+## Claves automaticas de practica
+
+El archivo `.env.practica` de esta carpeta se carga al arrancar normalmente, con prioridad sobre las claves de un `.env` antiguo. Conserva tu `.env` para la conexion a tu propia base y las direcciones de servicios. No hace falta ejecutar el configurador para cargar JWT_SECRET. Las variables explicitas del proceso conservan prioridad; `UNIRIDE_PRACTICA_AUTO=0` permite usar deliberadamente solo el `.env` local.

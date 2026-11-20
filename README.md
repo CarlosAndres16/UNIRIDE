@@ -19,14 +19,28 @@ Las direcciones se mantienen en `config/hamachi.json`. Si el Gateway cambia de e
 
 Actualiza tu copia con `git pull` y ejecuta los comandos desde la raíz de UNIRIDE. El configurador mezcla las variables de red con el `.env` del servicio y conserva todas las variables `DB_*`; crea una copia `.env.backup-*` si modifica un archivo existente. Si es tu primera instalación, crea `.env` desde el ejemplo y debes completar la conexión a tu propia base de datos.
 
-Los valores de `JWT_SECRET` y `SERVICE_API_KEY` están publicados en [`config/claves-practica.env`](config/claves-practica.env), por solicitud del equipo para esta práctica. Son el mismo par ya acordado: el configurador los usa por defecto, aunque haya un archivo privado antiguo `config/.env.equipo` con otros valores. `JWT_SECRET` se aplica a los cuatro microservicios y `SERVICE_API_KEY` solo a Viajes y Reservas. También están incluidos en los `.env.example` correspondientes.
+Cada microservicio contiene su propio `.env.practica` publicado con el par acordado. Python y Node lo cargan automaticamente al arrancar; el Compose de Vehiculos lo inyecta como `env_file`. Los cuatro usan el mismo JWT_SECRET y solo Viajes y Reservas reciben SERVICE_API_KEY. Los valores tambien estan en `config/claves-practica.env` y en los ejemplos.
 
 Estas claves son públicas y permiten firmar tokens de esta práctica. Su uso queda limitado al entorno académico. Las contraseñas de SQL Server/PostgreSQL y los tokens de sesión permanecen locales; el configurador conserva las variables `DB_*`.
 
-Después de `git pull`, cada responsable ejecuta el configurador de su servicio y reinicia su API. El comando `Iniciar-Servicio.ps1` también aplica la configuración antes de arrancar, de modo que todos usan el mismo par publicado. Si arrancas directamente con Python, npm o Docker, ejecuta primero el configurador.
+Despues de `git pull`, detengan los procesos anteriores y arranquen normalmente desde la carpeta de cada servicio. No hace falta ejecutar scripts de Hamachi para cargar las claves. El archivo `.env.practica` solo contiene las claves comunes; las conexiones DB_* y las direcciones permanecen en el `.env` local. Los ejemplos de Viajes y Reservas ya contienen las IP de Hamachi acordadas para la primera configuracion.
+
+| Servicio | Comando desde su carpeta |
+| --- | --- |
+| Usuarios | `.\.venv\Scripts\python.exe -m app` |
+| Vehiculos con Docker | `docker compose up --build -d` |
+| Vehiculos sin Docker | `.\.venv\Scripts\python.exe -m app` |
+| Viajes | `npm.cmd start` |
+| Reservas | `.\.venv\Scripts\python.exe -m app.main` |
+| Gateway | `npm.cmd start` |
+| Frontend | `npm.cmd run dev` |
+
+Las bases deben estar encendidas y configuradas. Recrear los contenedores de Vehiculos es necesario para cargar el nuevo `env_file`; no borren volumenes. Despues de reiniciar, vuelvan a iniciar sesion. Si una terminal define JWT_SECRET o SERVICE_API_KEY como variable del proceso, ese valor explicito tiene prioridad y debe coincidir con el equipo.
+
+Los scripts siguientes se conservan como herramientas opcionales para configurar direcciones o instalar dependencias:
 
 ```powershell
-# Cada responsable ejecuta SOLO el comando de su servicio.
+# Opcional: aplicar direcciones de Hamachi a tu .env local.
 .\scripts\Configurar-Hamachi.ps1 -Servicio Usuarios
 .\scripts\Configurar-Hamachi.ps1 -Servicio Vehiculos
 .\scripts\Configurar-Hamachi.ps1 -Servicio Viajes
@@ -37,7 +51,7 @@ Después de `git pull`, cada responsable ejecuta el configurador de su servicio 
 .\scripts\Configurar-Hamachi.ps1 -Servicio Frontend
 ```
 
-Para usar deliberadamente otro par de claves, agrega `-ClavesRuta 'C:\ruta\claves-compartidas.env'`; todos los servicios deben usar ese mismo archivo. `-GenerarClaves` conserva la opción de crear un par privado aparte, sin cambiar el archivo público. Para una instalación completa en un único equipo, usa `-Servicio Todos -Local`; las URLs se cambian a `127.0.0.1`. El configurador no crea bases de datos ni ejecuta migraciones.
+Para usar deliberadamente otro par privado, inicia mediante `Iniciar-Servicio.ps1 -ClavesRuta 'C:\ruta\claves-compartidas.env'`, o define `UNIRIDE_PRACTICA_AUTO=0` antes del arranque normal y configura tu `.env`. Todos los servicios deben usar ese mismo par. `-GenerarClaves` conserva la opción de crear un par privado aparte, sin cambiar el archivo público. Para una instalación completa en un único equipo, usa `-Servicio Todos -Local`; las URLs se cambian a `127.0.0.1`. El configurador no crea bases de datos ni ejecuta migraciones.
 
 ## Bases de datos y arranque
 
