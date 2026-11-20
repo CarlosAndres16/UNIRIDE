@@ -15,18 +15,15 @@ Portal del conductor con Usuarios, Vehículos, Viajes, Reservas y Estadísticas,
 
 Las direcciones se mantienen en `config/hamachi.json`. Si el Gateway cambia de equipo, cambia su `host` en ese archivo y vuelve a ejecutar el configurador para Gateway y Frontend. Estar en Hamachi no inicia las APIs: cada responsable debe arrancar su base y su servicio. Mantén los equipos despiertos y permite los puertos de sus APIs en el firewall únicamente para los integrantes de la red.
 
-## Configuración privada
+## Claves compartidas para la práctica
 
 Actualiza tu copia con `git pull` y ejecuta los comandos desde la raíz de UNIRIDE. El configurador mezcla las variables de red con el `.env` del servicio y conserva todas las variables `DB_*`; crea una copia `.env.backup-*` si modifica un archivo existente. Si es tu primera instalación, crea `.env` desde el ejemplo y debes completar la conexión a tu propia base de datos.
 
-El equipo utiliza un solo `JWT_SECRET` en los cuatro servicios y un único `SERVICE_API_KEY` en Viajes y Reservas. No se incorporan claves reales al repositorio. El archivo privado acordado tiene estas dos variables y se guarda localmente como `config/.env.equipo`:
+Los valores de `JWT_SECRET` y `SERVICE_API_KEY` están publicados en [`config/claves-practica.env`](config/claves-practica.env), por solicitud del equipo para esta práctica. Son el mismo par ya acordado: el configurador los usa por defecto, aunque haya un archivo privado antiguo `config/.env.equipo` con otros valores. `JWT_SECRET` se aplica a los cuatro microservicios y `SERVICE_API_KEY` solo a Viajes y Reservas. También están incluidos en los `.env.example` correspondientes.
 
-```dotenv
-JWT_SECRET=VALOR_PRIVADO_COMPARTIDO_DEL_EQUIPO
-SERVICE_API_KEY=OTRO_VALOR_PRIVADO_COMPARTIDO
-```
+Estas claves son públicas y permiten firmar tokens de esta práctica. Su uso queda limitado al entorno académico. Las contraseñas de SQL Server/PostgreSQL y los tokens de sesión permanecen locales; el configurador conserva las variables `DB_*`.
 
-Si ya recibiste las claves de Apache, utiliza esas. Solo cuando todavía no exista un par acordado, **un integrante** puede generarlo con `-GenerarClaves`; los demás reciben el mismo archivo por un canal privado. El configurador no sobrescribe un archivo de claves existente.
+Después de `git pull`, cada responsable ejecuta el configurador de su servicio y reinicia su API. El comando `Iniciar-Servicio.ps1` también aplica la configuración antes de arrancar, de modo que todos usan el mismo par publicado. Si arrancas directamente con Python, npm o Docker, ejecuta primero el configurador.
 
 ```powershell
 # Cada responsable ejecuta SOLO el comando de su servicio.
@@ -40,7 +37,7 @@ Si ya recibiste las claves de Apache, utiliza esas. Solo cuando todavía no exis
 .\scripts\Configurar-Hamachi.ps1 -Servicio Frontend
 ```
 
-Para leer el archivo privado desde otra ubicación, agrega `-ClavesRuta 'C:\ruta\claves-compartidas.env'`. Para una instalación completa en un único equipo, usa `-Servicio Todos -Local`; las URLs se cambian a `127.0.0.1`. El configurador no crea bases de datos ni ejecuta migraciones.
+Para usar deliberadamente otro par de claves, agrega `-ClavesRuta 'C:\ruta\claves-compartidas.env'`; todos los servicios deben usar ese mismo archivo. `-GenerarClaves` conserva la opción de crear un par privado aparte, sin cambiar el archivo público. Para una instalación completa en un único equipo, usa `-Servicio Todos -Local`; las URLs se cambian a `127.0.0.1`. El configurador no crea bases de datos ni ejecuta migraciones.
 
 ## Bases de datos y arranque
 

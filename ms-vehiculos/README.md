@@ -12,7 +12,7 @@ Microservicio de Vehículos de UniRide. Cumple el **Contrato Técnico Unificado 
 ## Arranque con Docker
 
 ```bash
-cp .env.example .env     # completa DB_PASSWORD y JWT_SECRET
+cp .env.example .env     # completa DB_PASSWORD; JWT_SECRET ya contiene el valor publico de practica
 docker compose up --build
 ```
 

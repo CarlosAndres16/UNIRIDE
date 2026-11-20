@@ -51,6 +51,7 @@ function New-Fixture([string]$Name) {
         Copy-Item -LiteralPath $scriptFile.FullName -Destination (Join-Path $path 'scripts')
     }
     Copy-Item -LiteralPath (Join-Path $repo 'config\hamachi.json') -Destination (Join-Path $path 'config\hamachi.json')
+    Write-TestFile (Join-Path $path 'config\claves-practica.env') ("JWT_SECRET=$jwt`r`nSERVICE_API_KEY=$serviceKey`r`n")
     foreach ($folder in $folders.Values) {
         $destination = Join-Path $path $folder
         New-Item -ItemType Directory -Path $destination -Force | Out-Null
@@ -226,5 +227,24 @@ foreach ($name in $folders.Keys) {
     Assert-Test ([System.IO.File]::ReadAllText((Get-EnvPath $generatedFixture $name)) -ceq $envContents[$name]) ('Sin modificaciones tras rechazar rotacion: ' + $name)
 }
 
+# The default public pair must win over an old private file, consistently on all peers.
+$publicFixture = New-Fixture 'public-default'
+$oldPrivate = Join-Path $publicFixture 'config\.env.equipo'
+Write-TestFile $oldPrivate "JWT_SECRET=clave-anterior-privada-de-prueba-123456789`r`nSERVICE_API_KEY=llave-anterior-privada-de-prueba-123456789`r`n"
+$result = Invoke-Configurator $publicFixture @{ Servicio = 'Todos' }
+Assert-Test $result.Succeeded 'La practica funciona sin recibir un archivo privado.'
+Assert-NoSecrets $result.Output @($jwt, $serviceKey)
+foreach ($name in @('usuarios','vehiculos','viajes','reservas')) {
+    $values = Read-Variables (Get-EnvPath $publicFixture $name)
+    Assert-Test ($values['JWT_SECRET'] -ceq $jwt) ('JWT publico compartido aplicado a ' + $name)
+    if ($name -in @('viajes','reservas')) {
+        Assert-Test ($values['SERVICE_API_KEY'] -ceq $serviceKey) ('Llave interna publica compartida aplicada a ' + $name)
+    } else { Assert-Test (-not $values.ContainsKey('SERVICE_API_KEY')) ('Sin llave interna innecesaria en ' + $name) }
+}
+foreach ($name in @('gateway','frontend')) {
+    $values = Read-Variables (Get-EnvPath $publicFixture $name)
+    Assert-Test (-not $values.ContainsKey('JWT_SECRET')) ('JWT no se copia a ' + $name)
+    Assert-Test (-not $values.ContainsKey('SERVICE_API_KEY')) ('Llave interna no se copia a ' + $name)
+}
 Write-Host ("OK: {0} aserciones; {1} scripts PowerShell parseados; pruebas offline sin bases reales ni red." -f $script:assertions, $parsed)
 Write-Host ('Fixtures conservados en ' + $fixtureRoot)

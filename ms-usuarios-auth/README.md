@@ -4,7 +4,7 @@ Backend de Usuarios y Autenticación para conductores. Registra conductores, ver
 
 Se incluyen la suite pytest y la colección Postman. La preparación local de SQL Server y las migraciones deben verificarse en el equipo propietario de Usuarios antes de integrar los servicios. El historial de implementación está en [docs/estado_fases.md](docs/estado_fases.md).
 
-Conservar el `.env` privado de cada equipo. El `JWT_SECRET` debe acordarse con los demás servicios por un canal privado; no se incluye ningún secreto en los ejemplos.
+Conservar el `.env` local de cada equipo para su conexion SQL. Las claves compartidas de esta practica estan publicadas en `config/claves-practica.env` y en los ejemplos; ejecuta el configurador de la raiz para aplicar exactamente el mismo JWT_SECRET en los cuatro servicios.
 
 ## Requisitos en Windows
 
@@ -39,7 +39,7 @@ Para incluir dependencias de pruebas, usar `.\scripts\setup.ps1 -IncluirPruebas`
 
 ## Variables de entorno
 
-Si se prepara otra copia del proyecto, completar `.env` localmente. `DB_PASSWORD` y `JWT_SECRET` se dejan vacíos en `.env.example` deliberadamente. El arranque con configuración incompleta debe fallar, en vez de utilizar secretos predeterminados.
+Si se prepara otra copia del proyecto, completar `.env` localmente. `DB_PASSWORD` se mantiene local. `.env.example` incluye el JWT_SECRET publico acordado para la practica; el configurador comun lo aplica tambien a un `.env` existente.
 
 | Variable | Uso |
 | --- | --- |
@@ -51,10 +51,10 @@ Si se prepara otra copia del proyecto, completar `.env` localmente. `DB_PASSWORD
 | `DB_USER` | Inicio de sesión SQL configurado localmente. |
 | `DB_PASSWORD` | Contraseña privada del inicio de sesión SQL. |
 | `DB_DRIVER` | `ODBC Driver 18 for SQL Server`. |
-| `JWT_SECRET` | Secreto privado compartido entre los cuatro microservicios; al menos 32 bytes UTF-8. |
+| `JWT_SECRET` | Clave compartida entre los cuatro microservicios; el valor publico de practica esta en `config/claves-practica.env`. |
 | `JWT_EXPIRES_IN_SECONDS` | Vigencia del token; `3600` segundos por defecto. |
 
-No copiar credenciales a código, capturas, documentación ni repositorio. `.gitignore` excluye `.env`, entornos virtuales y cachés. El secreto compartido debe acordarse por un canal privado entre los equipos: Usuarios firma; Vehículos, Viajes y Reservas verifican localmente con HS256. Para integración, todos deben usar el mismo valor; un secreto local generado automáticamente no coordina por sí solo los demás servicios.
+Las contrasenas SQL, los tokens y los archivos `.env` locales permanecen fuera de Git. Las dos claves compartidas de la practica se publican por solicitud del equipo: Usuarios firma y Vehiculos, Viajes y Reservas verifican con el mismo JWT_SECRET. Una clave generada individualmente rompe esta coordinacion; usa `Configurar-Hamachi.ps1` o `Iniciar-Servicio.ps1` desde la raiz para aplicar el par comun.
 
 La conexión `mssql+pyodbc` se construye desde las variables mediante SQLAlchemy; no hay cadena con credenciales incrustada. El certificado del servidor se acepta para el desarrollo local con `TrustServerCertificate=yes`. Esa configuración local no sustituye la configuración de certificados del entorno de despliegue.
 

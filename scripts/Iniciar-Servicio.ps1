@@ -2,10 +2,12 @@ param(
     [Parameter(Mandatory=$true)]
     [ValidateSet('Usuarios','Vehiculos','Viajes','Reservas','Gateway','Frontend')]
     [string]$Servicio,
-    [switch]$Instalar
+    [switch]$Instalar,
+    [string]$ClavesRuta = ''
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
+& (Join-Path $PSScriptRoot 'Configurar-Hamachi.ps1') -Servicio $Servicio -ClavesRuta $ClavesRuta
 $mapa = Get-Content -LiteralPath (Join-Path $repo 'config\hamachi.json') -Raw | ConvertFrom-Json
 $nombre = $Servicio.ToLowerInvariant()
 $directorio = Join-Path $repo $mapa.$nombre.carpeta

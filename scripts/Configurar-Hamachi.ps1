@@ -9,7 +9,9 @@ param(
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 if (-not $MapaRuta) { $MapaRuta = Join-Path $repo 'config\hamachi.json' }
-if (-not $ClavesRuta) { $ClavesRuta = Join-Path $repo 'config\.env.equipo' }
+if (-not $ClavesRuta) {
+    $ClavesRuta = Join-Path $repo $(if ($GenerarClaves) { 'config\.env.equipo' } else { 'config\claves-practica.env' })
+}
 $mapa = Get-Content -LiteralPath $MapaRuta -Raw | ConvertFrom-Json
 
 function Leer-Variable([string]$Archivo, [string]$Nombre) {
@@ -49,7 +51,8 @@ function Establecer-Variables([string]$Archivo, [System.Collections.IDictionary]
     }
 }
 
-# Solo un integrante genera el par. Los demás reciben este archivo por un canal privado.
+# La práctica usa el par público del repositorio. -ClavesRuta permite otro par explícito.
+# GenerarClaves escribe un archivo privado aparte y nunca cambia el par público.
 if ($GenerarClaves) {
     if (Test-Path -LiteralPath $ClavesRuta) { throw 'El archivo de claves ya existe. No se rotan claves de forma automática.' }
     New-Item -ItemType Directory -Path (Split-Path -Parent ([System.IO.Path]::GetFullPath($ClavesRuta))) -Force | Out-Null
@@ -60,11 +63,11 @@ $seleccion = if ($Servicio -eq 'Todos') { @('usuarios','vehiculos','viajes','res
 $jwt = $null; $serviceKey = $null
 if (@($seleccion | Where-Object { $_ -in @('usuarios','vehiculos','viajes','reservas') }).Count -gt 0) {
     $jwt = Leer-Variable $ClavesRuta 'JWT_SECRET'
-    if (-not $jwt -or [System.Text.Encoding]::UTF8.GetByteCount($jwt) -lt 32) { throw 'Falta JWT_SECRET válido en el archivo privado -ClavesRuta. Usa el mismo archivo del equipo.' }
+    if (-not $jwt -or [System.Text.Encoding]::UTF8.GetByteCount($jwt) -lt 32) { throw 'Falta JWT_SECRET válido en el archivo de claves. Actualiza el repositorio o revisa -ClavesRuta.' }
     $serviceKey = Leer-Variable $ClavesRuta 'SERVICE_API_KEY'
     if (@($seleccion | Where-Object { $_ -in @('viajes','reservas') }).Count -gt 0 -and
         (-not $serviceKey -or [System.Text.Encoding]::UTF8.GetByteCount($serviceKey) -lt 32 -or $serviceKey -eq $jwt)) {
-        throw 'Falta SERVICE_API_KEY válida y distinta del JWT_SECRET en el archivo privado.'
+        throw 'Falta SERVICE_API_KEY válida y distinta del JWT_SECRET en el archivo de claves.'
     }
     if ($jwt -notmatch '^[A-Za-z0-9_-]{32,}$' -or ($serviceKey -and $serviceKey -notmatch '^[A-Za-z0-9_-]{32,}$')) {
         throw 'El archivo de equipo debe contener las claves URL-safe generadas para esta integración, sin espacios ni comentarios en la misma línea.'
