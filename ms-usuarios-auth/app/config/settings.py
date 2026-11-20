@@ -19,6 +19,7 @@ class Settings(BaseSettings):
         hide_input_in_errors=True,
     )
 
+    SERVER_HOST: str = Field(default="0.0.0.0", min_length=1)
     SERVER_PORT: int = Field(ge=1, le=65535)
     DB_HOST: str = Field(min_length=1)
     DB_PORT: int = Field(ge=1, le=65535)
@@ -29,7 +30,7 @@ class Settings(BaseSettings):
     JWT_SECRET: SecretStr
     JWT_EXPIRES_IN_SECONDS: int = Field(default=3600, ge=1)
 
-    @field_validator("DB_HOST", "DB_NAME", "DB_USER", "DB_DRIVER")
+    @field_validator("SERVER_HOST", "DB_HOST", "DB_NAME", "DB_USER", "DB_DRIVER")
     @classmethod
     def validarTexto(cls, value: str) -> str:
         value = value.strip()

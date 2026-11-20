@@ -1,35 +1,39 @@
-require('dotenv').config();
+const path = require('node:path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
-const requeridas = [
-  'SERVER_PORT',
-  'USUARIOS_SERVICE_URL',
-  'VEHICULOS_SERVICE_URL',
-  'VIAJES_SERVICE_URL',
-  'RESERVAS_SERVICE_URL',
-  'GATEWAY_TIMEOUT_MS',
-  'FRONTEND_ORIGIN',
-];
-
-const faltantes = requeridas.filter(
-  (nombre) => !process.env[nombre] || process.env[nombre].trim() === ''
-);
-
-if (faltantes.length > 0) {
-  console.error(`Faltan variables de entorno: ${faltantes.join(', ')}`);
-  process.exit(1);
+function entero(nombre, defecto, minimo, maximo) {
+  const texto = process.env[nombre] ?? String(defecto);
+  const valor = /^\d+$/.test(texto) ? Number(texto) : NaN;
+  if (!Number.isSafeInteger(valor) || valor < minimo || valor > maximo) {
+    throw new Error(`Configuración inválida: ${nombre}.`);
+  }
+  return valor;
 }
 
-const sinBarraFinal = (url) => url.trim().replace(/\/+$/, '');
+function origen(nombre, valor) {
+  try {
+    const url = new URL(valor);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password ||
+        url.pathname !== '/' || url.search || url.hash) throw new Error();
+    return url.origin;
+  } catch { throw new Error(`Configuración inválida: ${nombre}; usa un origen HTTP sin rutas ni credenciales.`); }
+}
+
+function requerido(nombre) {
+  const valor = process.env[nombre]?.trim();
+  if (!valor) throw new Error(`Falta configurar ${nombre}.`);
+  return valor;
+}
 
 module.exports = {
-  port: Number(process.env.SERVER_PORT),
-  usuariosUrl: sinBarraFinal(process.env.USUARIOS_SERVICE_URL),
-  vehiculosUrl: sinBarraFinal(process.env.VEHICULOS_SERVICE_URL),
-  viajesUrl: sinBarraFinal(process.env.VIAJES_SERVICE_URL),
-  reservasUrl: sinBarraFinal(process.env.RESERVAS_SERVICE_URL),
-  gatewayTimeoutMs: Number(process.env.GATEWAY_TIMEOUT_MS),
-  frontendOrigins: process.env.FRONTEND_ORIGIN
-    .split(',')
-    .map(sinBarraFinal)
-    .filter(Boolean),
+  host: process.env.SERVER_HOST?.trim() || '0.0.0.0',
+  port: entero('SERVER_PORT', 8080, 1, 65535),
+  usuariosUrl: origen('USUARIOS_SERVICE_URL', requerido('USUARIOS_SERVICE_URL')),
+  vehiculosUrl: origen('VEHICULOS_SERVICE_URL', requerido('VEHICULOS_SERVICE_URL')),
+  viajesUrl: origen('VIAJES_SERVICE_URL', requerido('VIAJES_SERVICE_URL')),
+  reservasUrl: origen('RESERVAS_SERVICE_URL', requerido('RESERVAS_SERVICE_URL')),
+  gatewayTimeoutMs: entero('GATEWAY_TIMEOUT_MS', 20000, 1, 120000),
+  readinessTimeoutMs: entero('READINESS_TIMEOUT_MS', 8000, 1, 30000),
+  frontendOrigins: requerido('FRONTEND_ORIGIN').split(',')
+    .map(valor => origen('FRONTEND_ORIGIN', valor.trim())),
 };

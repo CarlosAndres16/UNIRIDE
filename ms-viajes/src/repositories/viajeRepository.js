@@ -154,8 +154,9 @@ async function actualizarOcupacion(id, cuposOcupados) {
     `UPDATE viajes
         SET fecha_actualizacion = CASE WHEN cupos_ocupados <> $2::integer
                                        THEN now() ELSE fecha_actualizacion END,
+            version = CASE WHEN cupos_ocupados <> $2::integer THEN version + 1 ELSE version END,
             cupos_ocupados = $2::integer
-      WHERE id = $1 AND estado = 'ACTIVO'
+      WHERE id = $1 AND estado = 'ACTIVO' AND $2::integer BETWEEN 0 AND capacidad
       RETURNING *`,
     [id, cuposOcupados]
   );

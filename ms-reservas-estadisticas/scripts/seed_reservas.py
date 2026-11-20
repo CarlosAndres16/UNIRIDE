@@ -1,6 +1,7 @@
 """Carga idempotente de las tres reservas de ejemplo en SQL Server."""
 
 import sys
+import argparse
 from datetime import UTC, datetime
 
 from pydantic import ValidationError
@@ -42,7 +43,7 @@ class DestinoNoPermitidoError(Exception):
     """La conexión no corresponde a la base de datos propia del servicio."""
 
 
-def cargarReservas(session: Session) -> tuple[int, int]:
+def cargarReservas(session: Session, viajeId: int = 305) -> tuple[int, int]:
     """Agrega ejemplos ausentes; la transacción la controla quien invoca.
 
     La identidad de cada ejemplo usa viaje, nombre y fecha UTC. Si ya existe,
@@ -50,6 +51,8 @@ def cargarReservas(session: Session) -> tuple[int, int]:
     lectura y de rango hasta que finalice la transacción en SQL Server.
     """
 
+    if type(viajeId) is not int or not 1 <= viajeId <= 2147483647:
+        raise ValueError("viajeId debe ser un entero SQL positivo.")
     databaseName = session.scalar(select(func.DB_NAME()))
     if databaseName != BASE_DATOS_DESTINO:
         raise DestinoNoPermitidoError
@@ -57,7 +60,8 @@ def cargarReservas(session: Session) -> tuple[int, int]:
     creadas = 0
     existentes = 0
 
-    for datosReserva in DATOS_PRUEBA:
+    for ejemplo in DATOS_PRUEBA:
+        datosReserva = {**ejemplo, "viajeId": viajeId}
         consulta = (
             select(Reserva.id)
             .where(
@@ -82,11 +86,17 @@ def cargarReservas(session: Session) -> tuple[int, int]:
 def main() -> int:
     """Carga las tres reservas en una única transacción y sin revelar secretos."""
 
+    parser = argparse.ArgumentParser(description="Carga ejemplos en la base propia de Reservas para un viaje real de prueba.")
+    parser.add_argument("--viaje-id", type=int, default=305,
+                        help="ID del viaje creado por el equipo; por defecto 305 para conservar los ejemplos anteriores.")
+    args = parser.parse_args()
+    if not 1 <= args.viaje_id <= 2147483647:
+        parser.error("--viaje-id debe ser un entero SQL positivo.")
     try:
         engine = getEngine()
         try:
             with getSessionFactory().begin() as session:
-                creadas, existentes = cargarReservas(session)
+                creadas, existentes = cargarReservas(session, args.viaje_id)
         finally:
             engine.dispose()
     except DestinoNoPermitidoError:

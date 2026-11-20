@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     )
 
     serverPort: int = Field(alias="SERVER_PORT", ge=1, le=65535)
+    serverHost: str = Field(default="0.0.0.0", alias="SERVER_HOST", min_length=1)
     dbHost: str = Field(alias="DB_HOST", min_length=1)
     dbPort: int = Field(alias="DB_PORT", ge=1, le=65535)
     dbName: str = Field(alias="DB_NAME", min_length=1)

@@ -13,13 +13,18 @@ const estadoNoPermitido = (accion, estado) =>
   );
 
 // ctx = { conductorId, token, correlationId }
-async function validarVehiculo(vehiculoId, ctx) {
+async function validarVehiculo(vehiculoId, capacidad, ctx) {
   const vehiculo = await vehiculosClient.obtenerVehiculo(vehiculoId, ctx);
   if (vehiculo.conductorId !== ctx.conductorId) {
     throw new AppError(403, 'NO_AUTORIZADO', 'El vehículo pertenece a otro conductor.');
   }
   if (vehiculo.estado !== 'ACTIVO') {
     throw new AppError(409, 'VEHICULO_INACTIVO', `El vehículo ${vehiculoId} está inactivo.`);
+  }
+  if (capacidad > vehiculo.capacidad) {
+    throw new AppError(400, 'CAPACIDAD_INVALIDA', 'La capacidad del viaje supera la del vehículo.', [
+      { campo: 'capacidad', problema: `No puede ser mayor que ${vehiculo.capacidad}` },
+    ]);
   }
 }
 
@@ -57,7 +62,7 @@ async function crear(ctx, datos, idempotencyKey) {
     if (previo) return previo;
   }
 
-  await validarVehiculo(datos.vehiculoId, ctx);
+  await validarVehiculo(datos.vehiculoId, datos.capacidad, ctx);
 
   const duplicado = await repo.existeDuplicado(
     ctx.conductorId,
@@ -66,6 +71,11 @@ async function crear(ctx, datos, idempotencyKey) {
     datos.horaSalida
   );
   if (duplicado) {
+    // Otra solicitud con la misma clave pudo crear el viaje tras la primera lectura.
+    if (idempotencyKey) {
+      const previo = await repo.buscarPorIdempotencia(ctx.conductorId, idempotencyKey);
+      if (previo) return previo;
+    }
     throw new AppError(
       409,
       'VIAJE_DUPLICADO',
@@ -89,14 +99,16 @@ async function crear(ctx, datos, idempotencyKey) {
   }
 }
 
-async function consultar(id) {
-  const viaje = await repo.buscarPorId(id);
-  if (!viaje) throw noEncontrado(id);
-  return viaje;
+async function consultar(ctx, id) {
+  return obtenerViajePropio(id, ctx.conductorId);
 }
 
-async function buscar(filtros) {
-  const { filas, total } = await repo.buscar(filtros);
+async function buscar(ctx, filtros) {
+  if (filtros.conductorId !== undefined && filtros.conductorId !== ctx.conductorId) {
+    throw new AppError(403, 'NO_AUTORIZADO', 'Solo puedes consultar tus propios viajes.');
+  }
+  // El alcance se impone en el servidor incluso si el cliente omite el filtro.
+  const { filas, total } = await repo.buscar({ ...filtros, conductorId: ctx.conductorId });
   return {
     filas,
     paginacion: {
@@ -120,8 +132,9 @@ async function modificar(ctx, id, datos, versionEsperada) {
   }
   if (viaje.estado !== 'ACTIVO') throw estadoNoPermitido('modificar', viaje.estado);
 
-  if (datos.vehiculoId !== undefined && datos.vehiculoId !== viaje.vehiculo_id) {
-    await validarVehiculo(datos.vehiculoId, ctx);
+  if (datos.vehiculoId !== undefined || datos.capacidad !== undefined) {
+    await validarVehiculo(datos.vehiculoId ?? viaje.vehiculo_id,
+      datos.capacidad ?? viaje.capacidad, ctx);
   }
 
   if (datos.capacidad !== undefined && datos.capacidad < viaje.cupos_ocupados) {
@@ -179,7 +192,12 @@ async function actualizarOcupacion(id, cuposOcupados) {
   if (viaje.estado !== 'ACTIVO') throw estadoNoPermitido('actualizar la ocupación de', viaje.estado);
 
   const actualizado = await repo.actualizarOcupacion(id, cuposOcupados);
-  if (!actualizado) throw estadoNoPermitido('actualizar la ocupación de', 'no ACTIVO');
+  if (!actualizado) {
+    const actual = await repo.buscarPorId(id);
+    if (!actual) throw noEncontrado(id);
+    if (actual.estado !== 'ACTIVO') throw estadoNoPermitido('actualizar la ocupación de', actual.estado);
+    throw new AppError(409, 'CONFLICTO_DE_VERSION', 'La capacidad del viaje cambió. Consulta el viaje de nuevo.');
+  }
   return actualizado;
 }
 

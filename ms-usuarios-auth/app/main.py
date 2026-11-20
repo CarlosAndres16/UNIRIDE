@@ -9,6 +9,7 @@ from fastapi.openapi.utils import get_openapi
 from app.config.database import getEngine
 from app.controllers.auth_controller import router as authRouter
 from app.controllers.conductor_controller import router as conductorRouter
+from app.controllers.health_controller import router as healthRouter
 from app.exceptions.handlers import registerExceptionHandlers
 from app.middleware.correlation_id import CorrelationIdMiddleware, CorrelationLogFilter
 
@@ -36,6 +37,7 @@ def createApp() -> FastAPI:
     registerExceptionHandlers(app)
     app.include_router(authRouter)
     app.include_router(conductorRouter)
+    app.include_router(healthRouter)
 
     def customOpenApi():
         if app.openapi_schema is None:

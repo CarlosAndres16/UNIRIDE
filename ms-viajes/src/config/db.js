@@ -11,10 +11,12 @@ const pool = new Pool({
   user: config.db.user,
   password: config.db.password,
   max: 10,
+  connectionTimeoutMillis: config.httpTimeoutMs,
+  query_timeout: config.httpTimeoutMs,
 });
 
 pool.on('error', (err) => {
-  console.error('Error inesperado en el pool de PostgreSQL:', err.message);
+  console.error('Error inesperado en el pool de PostgreSQL.');
 });
 
 module.exports = pool;

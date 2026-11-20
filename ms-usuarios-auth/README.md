@@ -2,9 +2,9 @@
 
 Backend de Usuarios y Autenticación para conductores. Registra conductores, verifica contraseñas, emite JWT y permite consultar y actualizar el recurso propio. Implementa los cinco endpoints del Contrato Técnico Unificado.
 
-Se entregan juntas las fases de implementación, la suite pytest y la colección Postman. Por solicitud del usuario **no se ejecutaron instalaciones, pruebas, comprobaciones de servicios, migraciones ni arranque**. La presencia del código de una fase no acredita que su infraestructura esté configurada o que sus pruebas hayan pasado. El estado se detalla en [docs/estado_fases.md](docs/estado_fases.md).
+Se incluyen la suite pytest y la colección Postman. La preparación local de SQL Server y las migraciones deben verificarse en el equipo propietario de Usuarios antes de integrar los servicios. El historial de implementación está en [docs/estado_fases.md](docs/estado_fases.md).
 
-El archivo `.env` privado ya quedó preparado localmente con las credenciales proporcionadas y un `JWT_SECRET` aleatorio. No se muestran esos valores ni se incluyen en los ejemplos. Queda pendiente acordar ese secreto con los demás servicios por un canal privado.
+Conservar el `.env` privado de cada equipo. El `JWT_SECRET` debe acordarse con los demás servicios por un canal privado; no se incluye ningún secreto en los ejemplos.
 
 ## Requisitos en Windows
 
@@ -18,10 +18,9 @@ El servicio usa FastAPI, Uvicorn, Pydantic v2, pydantic-settings, SQLAlchemy 2.x
 
 ## Preparación con PowerShell
 
-Abrir PowerShell en esta carpeta. Todos los comandos siguientes son instrucciones para ejecutar cuando se quiera preparar el entorno; no se han ejecutado durante la entrega.
+Abrir PowerShell en esta carpeta. Los comandos siguientes preparan el entorno del equipo de Usuarios:
 
 ```powershell
-Set-Location 'C:\Users\juadi\OneDrive\Desktop\Uni\Distribuidos\Auth\ms-usuarios-auth'
 .\scripts\setup.ps1
 ```
 
@@ -44,6 +43,7 @@ Si se prepara otra copia del proyecto, completar `.env` localmente. `DB_PASSWORD
 
 | Variable | Uso |
 | --- | --- |
+| `SERVER_HOST` | Interfaz HTTP; `0.0.0.0` por defecto para aceptar conexiones LAN/Hamachi. Puede fijarse a `25.32.113.17` en el equipo de Usuarios. |
 | `SERVER_PORT` | Puerto HTTP local; `8081`. |
 | `DB_HOST` | Host SQL Server; normalmente `localhost`. |
 | `DB_PORT` | Puerto TCP SQL Server; normalmente `1433`. |
@@ -96,7 +96,18 @@ Los tamaños son detalles de implementación, no nuevos campos funcionales. `DAT
 .\scripts\start.ps1
 ```
 
-El script inicia Uvicorn usando `SERVER_PORT`. La URL local predeterminada es `http://localhost:8081`. Swagger UI está en `http://localhost:8081/docs` y el esquema de herramientas en `/openapi.json`. `/` no es un endpoint de negocio; solo están implementadas las cinco rutas contractuales. ReDoc está deshabilitado.
+El script inicia Uvicorn usando `SERVER_HOST` y `SERVER_PORT`. La URL local predeterminada es `http://localhost:8081`; desde los demás equipos Hamachi, `http://25.32.113.17:8081`. `0.0.0.0` es una interfaz de escucha, no una URL para el cliente. Swagger UI está en `/docs` y el esquema de las cinco rutas de negocio en `/openapi.json`. ReDoc está deshabilitado.
+
+El equipo de Usuarios conserva su propia base SQL Server y sus credenciales `DB_*`; la IP Hamachi identifica al servicio HTTP. El gateway en `25.1.20.39` y los otros servicios deben poder acceder al puerto TCP 8081 a través de Hamachi y del firewall de Windows.
+
+Las comprobaciones operativas no requieren JWT:
+
+| Ruta | Resultado |
+| --- | --- |
+| `GET /health` | `200` con `{"status":"UP","servicio":"ms-usuarios-auth"}`; no abre una conexión SQL. |
+| `GET /health/ready` | Ejecuta `SELECT 1`; `200` con `status` y `database` en `UP`, o `503` con ambos en `DOWN`. Incluye `servicio` y nunca publica detalles del driver ni credenciales. |
+
+La disponibilidad de `/health` confirma que el proceso HTTP responde; `/health/ready` confirma además la conexión a su base. La conexión ODBC limita a cinco segundos el intento de acceso. La consulta de readiness no crea tablas ni ejecuta migraciones.
 
 ## API y autenticación
 
@@ -141,7 +152,7 @@ Los errores de entrada usan HTTP 400 en lugar del 422 predeterminado e incluyen 
 python -m pytest -q
 ```
 
-Este comando permite ejecutar opcionalmente la suite. No se ejecutó en esta entrega. Las pruebas HTTP utilizan una base SQLite efímera, `StaticPool`, `schema_translate_map` y reemplazos de dependencias; no leen el `.env` real ni acceden a SQL Server. `create_all()` se limita a esa base de pruebas. SQLite permite probar lógica y contrato HTTP, pero no acredita el comportamiento del driver, tipos o restricciones de SQL Server.
+Las pruebas HTTP utilizan una base SQLite efímera, `StaticPool`, `schema_translate_map` y reemplazos de dependencias; no leen el `.env` real ni acceden a SQL Server. `create_all()` se limita a esa base de pruebas. SQLite permite probar lógica y contrato HTTP, pero no acredita el comportamiento del driver, tipos o restricciones de SQL Server. Las pruebas de operación verifican el arranque LAN y las respuestas de salud, incluida la ocultación de errores de conexión.
 
 La integración de SQL Server se omite por defecto. Para habilitarla, definir explícitamente en el entorno los valores `DB_*` y `JWT_*` requeridos, usando una base ya migrada y credenciales privadas:
 

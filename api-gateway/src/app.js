@@ -5,6 +5,7 @@ const bloquearOcupacion = require('./middlewares/bloquearOcupacion');
 const { notFound, errorHandler } = require('./middlewares/errores');
 const crearProxy = require('./proxy/crearProxy');
 const rutas = require('./config/rutas');
+const { readiness } = require('./health');
 
 const app = express();
 
@@ -17,7 +18,7 @@ app.use(correlationId);
 app.use((req, res, next) => {
   res.on('finish', () => {
     console.log(
-      `${new Date().toISOString()} ${req.method} ${req.originalUrl} ${res.statusCode} cid=${req.correlationId}`
+      `${new Date().toISOString()} ${req.method} ${req.originalUrl.split('?')[0]} ${res.statusCode} cid=${req.correlationId}`
     );
   });
   next();
@@ -29,6 +30,7 @@ app.use(cors);
 app.get('/health', (req, res) =>
   res.json({ status: 'UP', servicio: 'api-gateway' })
 );
+app.get('/health/ready', readiness);
 
 app.use(bloquearOcupacion);
 

@@ -139,7 +139,7 @@ function validarOcupacion(body) {
   const val = new Validador();
   if (body.cuposOcupados === undefined || body.cuposOcupados === null) {
     val.agregar('cuposOcupados', 'Es obligatorio', 'CAMPO_OBLIGATORIO_FALTANTE');
-  } else if (!Number.isInteger(body.cuposOcupados) || body.cuposOcupados < 0) {
+  } else if (!Number.isInteger(body.cuposOcupados) || body.cuposOcupados < 0 || body.cuposOcupados > MAX_INT) {
     val.agregar('cuposOcupados', 'Debe ser un entero mayor o igual a 0');
   }
   val.lanzarSiHayErrores();
@@ -280,7 +280,7 @@ function leerIfMatch(req) {
   const crudo = req.get('If-Match');
   if (crudo === undefined) return undefined;
   const limpio = crudo.trim().replace(/^W\//, '').replace(/^"|"$/g, '');
-  if (!/^\d+$/.test(limpio)) {
+  if (!/^\d+$/.test(limpio) || Number(limpio) < 1 || Number(limpio) > MAX_INT) {
     throw new AppError(400, 'FORMATO_INVALIDO', 'If-Match debe contener el valor de version.', [
       { campo: 'If-Match', problema: 'Debe ser un entero' },
     ]);

@@ -1,13 +1,17 @@
 const config = require('../config/env');
 const { AppError } = require('../utils/errores');
 
-function esVehiculoValido(v) {
+const esId = (v) => Number.isInteger(v) && v > 0 && v <= 2147483647;
+
+function esVehiculoValido(v, vehiculoId) {
   return (
     v !== null &&
     typeof v === 'object' &&
-    Number.isInteger(v.vehiculoId) &&
-    Number.isInteger(v.conductorId) &&
-    typeof v.estado === 'string'
+    !Array.isArray(v) &&
+    esId(v.vehiculoId) && v.vehiculoId === vehiculoId &&
+    esId(v.conductorId) &&
+    esId(v.capacidad) &&
+    ['ACTIVO', 'INACTIVO'].includes(v.estado)
   );
 }
 
@@ -17,15 +21,13 @@ function esVehiculoValido(v) {
  * - 401/403/404: se propagan con su propio error
  * - Caída, timeout o respuesta inválida: 1 reintento y luego 503
  */
-async function obtenerVehiculo(vehiculoId, { token, correlationId }) {
+async function obtenerVehiculo(vehiculoId, { token, correlationId, conductorId }) {
   const url = `${config.vehiculosUrl}/api/v1/vehiculos/${vehiculoId}`;
   const headers = {
     Authorization: `Bearer ${token}`,
     'X-Correlation-Id': correlationId,
     Accept: 'application/json',
   };
-
-  let ultimoError = null;
 
   for (let intento = 0; intento <= config.httpMaxRetries; intento++) {
     try {
@@ -37,8 +39,11 @@ async function obtenerVehiculo(vehiculoId, { token, correlationId }) {
 
       if (resp.status === 200) {
         const cuerpo = await resp.json();
-        if (!esVehiculoValido(cuerpo)) {
+        if (!esVehiculoValido(cuerpo, vehiculoId)) {
           throw new Error('Respuesta inválida del servicio de Vehículos');
+        }
+        if (cuerpo.conductorId !== conductorId) {
+          throw new AppError(403, 'NO_AUTORIZADO', 'El vehículo pertenece a otro conductor.');
         }
         return cuerpo;
       }
@@ -54,7 +59,6 @@ async function obtenerVehiculo(vehiculoId, { token, correlationId }) {
       throw new Error(`Vehículos respondió con estado ${resp.status}`);
     } catch (err) {
       if (err instanceof AppError) throw err; // errores del proveedor: no se reintentan
-      ultimoError = err;
     }
   }
 
@@ -63,7 +67,7 @@ async function obtenerVehiculo(vehiculoId, { token, correlationId }) {
       nivel: 'ERROR',
       dependencia: 'ms-vehiculos',
       correlationId,
-      detalle: ultimoError ? ultimoError.message : 'desconocido',
+      detalle: 'No se obtuvo una respuesta válida de Vehículos.',
     })
   );
   throw new AppError(

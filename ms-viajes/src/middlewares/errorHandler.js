@@ -39,8 +39,7 @@ function errorHandler(err, req, res, next) {
         correlationId: req.correlationId,
         ruta: `${req.method} ${rutaSinQuery(req)}`,
         error,
-        detalle: err.message,
-        stack: err.stack,
+        detalle: 'Error procesando la solicitud.',
       })
     );
   }

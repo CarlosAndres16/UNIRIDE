@@ -1,0 +1,13 @@
+# Configuración privada y archivos generados en cualquier servicio
+**/.env
+**/.env.*
+!**/.env.example
+**/.venv/
+**/node_modules/
+**/__pycache__/
+**/.pytest_cache/
+**/*.pyc
+**/dist/
+**/*.tsbuildinfo
+.setup/
+*.log

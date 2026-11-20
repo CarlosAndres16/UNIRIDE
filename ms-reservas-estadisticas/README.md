@@ -377,3 +377,11 @@ reports/         Informes JUnit de las ejecuciones
 
 La carpeta hermana `X:\Proyecto Uniride\entregas` conserva las guías de las fases
 previas y la entrega final con el contenido completo de los archivos implementados.
+
+## Integración por Hamachi
+
+Desde la raíz de UNIRIDE, ejecuta `scripts\Configurar-Hamachi.ps1 -Servicio Reservas` con el archivo privado de claves acordado. Conserva tus variables DB_*, incluido el puerto real de SQL Server, y aplica las migraciones antes del primer arranque. `SERVER_HOST` permite escuchar en todas las interfaces sin cambiar el comando `python -m app.main`; el arranque no activa reload por defecto.
+
+`GET /health` responde por el proceso sin consultar SQL. `GET /health/ready` ejecuta SELECT 1 en la base propia desde un hilo y devuelve 503 si la conexión falla, sin publicar errores ODBC ni credenciales. Ninguna de estas rutas requiere JWT.
+
+Para datos de integración, `python -m scripts.seed_reservas --viaje-id ID_REAL` utiliza el identificador real del viaje creado en Viajes. Omitir la opción conserva el ejemplo histórico 305. El seed escribe en SQL y debe ejecutarse deliberadamente sobre registros de prueba.

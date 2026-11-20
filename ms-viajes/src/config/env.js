@@ -19,22 +19,48 @@ const faltantes = requeridas.filter(
 );
 
 if (faltantes.length > 0) {
-  console.error(`Faltan variables de entorno: ${faltantes.join(', ')}`);
-  process.exit(1);
+  throw new Error(`Faltan variables de entorno: ${faltantes.join(', ')}`);
+}
+
+function entero(nombre, minimo, maximo) {
+  const valor = process.env[nombre].trim();
+  if (!/^\d+$/.test(valor) || !Number.isSafeInteger(Number(valor)) ||
+      Number(valor) < minimo || Number(valor) > maximo) {
+    throw new Error(`Configuración inválida: ${nombre} debe ser un entero entre ${minimo} y ${maximo}.`);
+  }
+  return Number(valor);
+}
+
+function urlServicio(nombre) {
+  try {
+    const url = new URL(process.env[nombre]);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password ||
+        url.search || url.hash) throw new Error();
+    return url.toString().replace(/\/+$/, '');
+  } catch {
+    // Nunca incluir el valor: una URL mal configurada puede contener credenciales.
+    throw new Error(`Configuración inválida: ${nombre} debe ser una URL HTTP(S) sin credenciales, query ni fragmento.`);
+  }
+}
+
+const host = process.env.SERVER_HOST?.trim() || '0.0.0.0';
+if (!/^[a-zA-Z0-9.:-]+$/.test(host)) {
+  throw new Error('Configuración inválida: SERVER_HOST debe ser una IP o nombre de host.');
 }
 
 module.exports = {
-  port: Number(process.env.SERVER_PORT),
+  host,
+  port: entero('SERVER_PORT', 1, 65535),
   db: {
     host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT),
+    port: entero('DB_PORT', 1, 65535),
     database: process.env.DB_NAME,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
   },
   jwtSecret: process.env.JWT_SECRET,
   serviceApiKey: process.env.SERVICE_API_KEY,
-  vehiculosUrl: process.env.VEHICULOS_SERVICE_URL.replace(/\/+$/, ''),
-  httpTimeoutMs: Number(process.env.HTTP_TIMEOUT_MS),
-  httpMaxRetries: Number(process.env.HTTP_MAX_RETRIES),
+  vehiculosUrl: urlServicio('VEHICULOS_SERVICE_URL'),
+  httpTimeoutMs: entero('HTTP_TIMEOUT_MS', 1, 120000),
+  httpMaxRetries: entero('HTTP_MAX_RETRIES', 0, 3),
 };

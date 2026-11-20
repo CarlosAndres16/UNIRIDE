@@ -25,13 +25,13 @@ async function crear(req, res) {
 
 async function consultar(req, res) {
   const viajeId = leerIdRuta(req.params.viajeId, 'viajeId');
-  const viaje = await service.consultar(viajeId);
+  const viaje = await service.consultar(contexto(req), viajeId);
   res.status(200).json(aViajeResponse(viaje));
 }
 
 async function buscar(req, res) {
   const filtros = validarFiltros(req.query);
-  const { filas, paginacion } = await service.buscar(filtros);
+  const { filas, paginacion } = await service.buscar(contexto(req), filtros);
   res.status(200).json({ datos: filas.map(aViajeResponse), paginacion });
 }
 

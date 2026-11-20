@@ -1,0 +1,13 @@
+{
+  "fecha": "2026-11-19",
+  "tipo": "pruebas aisladas y comprobaciones locales",
+  "usuarios": { "aprobadas": 101, "omitidas_sql_real": 1 },
+  "vehiculos": { "colectadas": 32, "estado": "compilacion y revision correctas; suite completa pendiente tras cancelacion de la ejecucion con permisos de red local" },
+  "reservas": { "aprobadas": 238, "omitidas_sql_real": 3, "subpruebas_aprobadas": 261 },
+  "viajes": { "aprobadas": 17, "proveedor_y_base": "simulados" },
+  "gateway": { "aprobadas": 13, "proveedores": "cuatro servidores HTTP locales simulados" },
+  "frontend": { "aprobadas": 14, "build": "correcto" },
+  "configuracion": { "aserciones": 299, "interpretes": ["PowerShell 7", "Windows PowerShell 5.1"] },
+  "pendiente": ["conectividad Hamachi con los equipos encendidos", "bases de datos reales", "recorrido funcional real con el nuevo Gateway"],
+  "secretos_publicados": false
+}

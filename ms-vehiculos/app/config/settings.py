@@ -18,6 +18,7 @@ class Settings(BaseSettings):
         hide_input_in_errors=True,
     )
 
+    SERVER_HOST: str = Field(default="0.0.0.0", min_length=1)
     SERVER_PORT: int = Field(ge=1, le=65535)
     DB_HOST: str = Field(min_length=1)
     DB_PORT: int = Field(ge=1, le=65535)
@@ -25,6 +26,14 @@ class Settings(BaseSettings):
     DB_USER: str = Field(min_length=1)
     DB_PASSWORD: SecretStr
     JWT_SECRET: SecretStr
+
+    @field_validator("SERVER_HOST")
+    @classmethod
+    def validarHost(cls, value: str) -> str:
+        host = value.strip()
+        if not host:
+            raise ValueError("SERVER_HOST no puede estar vacío.")
+        return host
 
     @field_validator("DB_PASSWORD")
     @classmethod

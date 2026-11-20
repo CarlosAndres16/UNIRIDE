@@ -23,7 +23,9 @@ function crearProxy({ nombre, target, prefijos }) {
         }
 
         const transcurrido = Date.now() - req.inicioMs;
-        const esTimeout = transcurrido >= env.gatewayTimeoutMs - 200;
+        const tolerancia = Math.min(200, env.gatewayTimeoutMs * 0.05);
+        const esTimeout = ['ETIMEDOUT', 'ESOCKETTIMEDOUT'].includes(err.code) ||
+          (err.code === 'ECONNRESET' && transcurrido >= env.gatewayTimeoutMs - tolerancia);
 
         console.error(
           JSON.stringify({

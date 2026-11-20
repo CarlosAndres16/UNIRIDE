@@ -36,6 +36,7 @@ def getEngine() -> Engine:
         echo=False,
         hide_parameters=True,
         pool_pre_ping=True,
+        connect_args={"timeout": 5},
     )
 
 

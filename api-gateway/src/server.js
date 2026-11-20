@@ -1,6 +1,10 @@
 const env = require('./config/env');
 const app = require('./app');
 
-app.listen(env.port, '0.0.0.0', () => {
-  console.log(`api-gateway escuchando en el puerto ${env.port} (todas las interfaces)`);
+const server = app.listen(env.port, env.host, () => {
+  console.log(`api-gateway escuchando en ${env.host}:${env.port}`);
 });
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => server.close(() => process.exit(0)));
+}

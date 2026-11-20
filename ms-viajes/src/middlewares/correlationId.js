@@ -3,7 +3,7 @@ const { randomUUID } = require('crypto');
 module.exports = (req, res, next) => {
   const entrante = req.get('X-Correlation-Id');
   req.correlationId =
-    entrante && entrante.trim() !== '' && entrante.length <= 100
+    typeof entrante === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entrante.trim())
       ? entrante.trim()
       : randomUUID();
   res.set('X-Correlation-Id', req.correlationId);

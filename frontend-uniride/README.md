@@ -89,7 +89,7 @@ La sesión real utiliza `sessionStorage` de la pestaña. Se elimina al cerrar se
 
 Los errores muestran un mensaje y, cuando está disponible, una referencia de correlación para localizar la petición en los registros. Un `409` o `412` al editar requiere actualizar los datos antes de reintentar.
 
-En la revisión del backend se observó que las lecturas de Viajes todavía requieren reforzar la autorización de propietario. El frontend fuerza el filtro del conductor actual y rechaza viajes de otra cuenta, pero esta comprobación no reemplaza la autorización del microservicio. Esa corrección sigue siendo necesaria antes de exponer el sistema públicamente.
+Viajes aplica la autorización de propietario también en las consultas. El frontend envía el filtro del conductor actual y rechaza respuestas de otra cuenta como comprobación adicional.
 
 ## Compilación y pruebas
 
@@ -145,3 +145,7 @@ vite.config.ts     Servidor local y proxy
 - **Hay vehículos, pero no pueden utilizarse en Viajes:** revisa que estén activos y que Viajes tenga la URL real del servicio de Vehículos.
 - **Reservas o estadísticas devuelven un error:** revisa sus dependencias de Viajes y Vehículos y el `SERVICE_API_KEY` privado utilizado entre Reservas y Viajes.
 - **Aparece `ModuleNotFoundError: app`:** es un problema del arranque del microservicio Python. Ejecútalo desde la carpeta de ese servicio con el comando de su README; el frontend se inicia con `npm.cmd run dev`.
+
+## Conexión entre equipos
+
+El mapa compartido está en `config/hamachi.json`, en la raíz del repositorio. Ejecuta `scripts\Configurar-Hamachi.ps1 -Servicio Frontend` desde esa raíz para apuntar al Gateway de Apache. `FRONTEND_HOST=0.0.0.0` permite abrir el portal por la IP de Hamachi del equipo que ejecuta Vite; `FRONTEND_PORT` controla su puerto. El servidor de desarrollo se comparte únicamente dentro de la red del equipo. Los secretos permanecen en los microservicios.

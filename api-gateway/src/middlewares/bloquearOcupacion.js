@@ -2,10 +2,12 @@ const { enviarError } = require('../utils/respuestaError');
 
 // PUT /api/v1/viajes/{viajeId}/ocupacion es solo entre servicios:
 // el Gateway no lo publica (secciones 4 y 5 del contrato).
-const RUTA_OCUPACION = /^\/api\/v1\/viajes\/[^/]+\/ocupacion\/?$/;
+const RUTA_OCUPACION = /^\/api\/v1\/viajes\/[^/]+\/ocupacion\/?$/i;
 
 module.exports = (req, res, next) => {
-  if (RUTA_OCUPACION.test(req.path)) {
+  let ruta;
+  try { ruta = decodeURIComponent(req.path); } catch { ruta = req.path; }
+  if (RUTA_OCUPACION.test(ruta)) {
     return enviarError(
       req,
       res,

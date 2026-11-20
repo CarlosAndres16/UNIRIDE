@@ -5,6 +5,7 @@ from app.config.logging_config import configurarLogging
 from app.config.settings import getSettings
 from app.controllers.estadistica_controller import router as estadisticaRouter
 from app.controllers.reserva_controller import router as reservaRouter
+from app.controllers.health_controller import router as healthRouter
 from app.exceptions.handlers import registrarManejadores
 from app.middleware.correlation_id import CorrelationIdMiddleware
 
@@ -24,6 +25,7 @@ def crearAplicacion() -> FastAPI:
     application.add_middleware(CorrelationIdMiddleware)
     application.include_router(reservaRouter)
     application.include_router(estadisticaRouter)
+    application.include_router(healthRouter)
     return application
 
 
@@ -35,7 +37,8 @@ if __name__ == "__main__":
 
     uvicorn.run(
         "app.main:app",
+        host=getSettings().serverHost,
         port=getSettings().serverPort,
-        reload=True,
+        reload=False,
         access_log=False,
     )
