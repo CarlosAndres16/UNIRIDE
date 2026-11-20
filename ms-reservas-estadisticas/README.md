@@ -390,3 +390,18 @@ Para datos de integración, `python -m scripts.seed_reservas --viaje-id ID_REAL`
 ## Claves automaticas de practica
 
 El archivo `.env.practica` de esta carpeta se carga al arrancar normalmente, con prioridad sobre las claves de un `.env` antiguo. Conserva tu `.env` para la conexion a tu propia base y las direcciones de servicios. No hace falta ejecutar el configurador para cargar JWT_SECRET y SERVICE_API_KEY. Las variables explicitas del proceso conservan prioridad; `UNIRIDE_PRACTICA_AUTO=0` permite usar deliberadamente solo el `.env` local.
+
+## Diagnostico de respuestas 401
+
+La respuesta publica mantiene el formato 401 del contrato. En la terminal de Reservas se registra `JWT rechazado motivo=...` con su correlacion, sin imprimir el token, la clave ni datos del conductor:
+
+| Motivo | Que revisar |
+| --- | --- |
+| `FIRMA_INVALIDA` | La clave cargada por Usuarios y Reservas, la copia del proyecto ejecutada y tokens emitidos antes de cambiar claves |
+| `TOKEN_VENCIDO` | Iniciar sesion de nuevo |
+| `TOKEN_ADELANTADO_REVISAR_RELOJ` | Hora UTC de los equipos de Usuarios y Reservas; sincronizacion del reloj |
+| `CLAIMS_INCOMPLETOS` o `CLAIMS_INVALIDOS` | Token emitido por Usuarios con sub textual e iat/exp enteros |
+| `AUTHORIZATION_AUSENTE`, `AUTHORIZATION_DUPLICADA` o `AUTHORIZATION_INVALIDA` | Cabecera unica Authorization Bearer enviada desde el navegador y conservada por el Gateway |
+| `TOKEN_MALFORMADO` o `ALGORITMO_NO_PERMITIDO` | Token completo firmado con HS256 |
+
+Comparar archivos no verifica el secreto que un proceso ya iniciado conserva en memoria. Reinicia la API desde la carpeta correcta y reproduce una sola solicitud para consultar su motivo y correlacion.

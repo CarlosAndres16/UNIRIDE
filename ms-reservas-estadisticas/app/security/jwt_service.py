@@ -13,6 +13,23 @@ from app.config.settings import getJwtSettings
 from app.exceptions.exceptions import ErrorInterno, NoAutenticadoError, NoAutorizadoError
 
 logger = logging.getLogger("uniride.security")
+
+
+def motivoTokenInvalido(error: Exception) -> str:
+    """Clasifica el fallo sin registrar tokens, claves ni mensajes del proveedor."""
+    for tipo, motivo in (
+        (jwt.ExpiredSignatureError, "TOKEN_VENCIDO"),
+        (jwt.ImmatureSignatureError, "TOKEN_ADELANTADO_REVISAR_RELOJ"),
+        (jwt.InvalidSignatureError, "FIRMA_INVALIDA"),
+        (jwt.MissingRequiredClaimError, "CLAIMS_INCOMPLETOS"),
+        (jwt.InvalidAlgorithmError, "ALGORITMO_NO_PERMITIDO"),
+        (jwt.DecodeError, "TOKEN_MALFORMADO"),
+    ):
+        if isinstance(error, tipo):
+            return motivo
+    return "CLAIMS_INVALIDOS"
+
+
 bearerScheme = HTTPBearer(
     auto_error=False,
     scheme_name="BearerAuth",
@@ -63,8 +80,9 @@ class JwtService:
                 raise ValueError("Fechas del token invalidas.")
             if claims["exp"] <= claims["iat"]:
                 raise ValueError("Periodo del token invalido.")
-        except (jwt.InvalidTokenError, ValueError, TypeError, OverflowError):
+        except (jwt.InvalidTokenError, ValueError, TypeError, OverflowError) as error:
             # La misma respuesta publica para firma, formato y vigencia invalidos.
+            logger.warning("JWT rechazado motivo=%s", motivoTokenInvalido(error))
             raise NoAutenticadoError() from None
 
         return ConductorAutenticado(conductorId=conductorId, token=SecretStr(token))
@@ -78,11 +96,16 @@ def obtenerBearerToken(
 
     headers = request.headers.getlist("authorization")
     if len(headers) != 1 or credentials is None:
+        motivo = "AUTHORIZATION_AUSENTE" if not headers else (
+            "AUTHORIZATION_DUPLICADA" if len(headers) > 1 else "AUTHORIZATION_INVALIDA"
+        )
+        logger.warning("JWT rechazado motivo=%s", motivo)
         raise NoAutenticadoError()
     scheme, separator, token = headers[0].partition(" ")
     # Bearer permite uno o mas espacios entre el esquema y el token.
     token = token.lstrip(" ")
     if not separator or scheme.lower() != "bearer" or not token or any(char.isspace() for char in token):
+        logger.warning("JWT rechazado motivo=AUTHORIZATION_INVALIDA")
         raise NoAutenticadoError()
     return token
 
